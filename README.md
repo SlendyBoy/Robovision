@@ -7,14 +7,14 @@ Tanguy FROUIN 5IRC
 1. État de l'Art
 
 Sources:
-https://jeffzzq.medium.com/ros2-image-pipeline-tutorial-3b18903e7329
-https://developer.nvidia.com/blog/detecting-objects-in-point-clouds-using-ros-2-and-tao-pointpillars/
-https://www.stereolabs.com/docs/ros2/depth-sensing/
-https://github.com/IntelRealSense/librealsense/tree/development/wrappers/python/examples
-https://github.com/google/mediapipe/blob/master/docs/solutions/objectron.md
-https://developers.google.com/mediapipe/solutions/guide
-https://medium.com/@regis.loeb/playing-with-point-clouds-for-3d-object-detection-eff1d98e526a
-https://medium.com/yodayoda/from-depth-map-to-point-cloud-7473721d3f
+https://jeffzzq.medium.com/ros2-image-pipeline-tutorial-3b18903e7329  
+https://developer.nvidia.com/blog/detecting-objects-in-point-clouds-using-ros-2-and-tao-pointpillars/  
+https://www.stereolabs.com/docs/ros2/depth-sensing/  
+https://github.com/IntelRealSense/librealsense/tree/development/wrappers/python/examples  
+https://github.com/google/mediapipe/blob/master/docs/solutions/objectron.md  
+https://developers.google.com/mediapipe/solutions/guide  
+https://medium.com/@regis.loeb/playing-with-point-clouds-for-3d-object-detection-eff1d98e526a  
+https://medium.com/yodayoda/from-depth-map-to-point-cloud-7473721d3f  
 
 
 
