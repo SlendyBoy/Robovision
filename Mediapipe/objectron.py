@@ -3,12 +3,12 @@ import mediapipe as mp
 mp_drawing = mp.solutions.drawing_utils
 mp_objectron = mp.solutions.objectron
 
-cap = cv2.VideoCapture("/dev/video2")
+cap = cv2.VideoCapture(2)
 with mp_objectron.Objectron(static_image_mode=False,
                             max_num_objects=5,
                             min_detection_confidence=0.3,
                             min_tracking_confidence=0.5,
-                            model_name='Chair') as objectron:
+                            model_name='Shoe') as objectron:
   while cap.isOpened():
     success, image = cap.read()
     if not success:

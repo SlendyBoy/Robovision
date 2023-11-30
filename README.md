@@ -6,17 +6,30 @@ Tanguy FROUIN 5IRC
 
 1. État de l'Art
 
-Sources:
-https://jeffzzq.medium.com/ros2-image-pipeline-tutorial-3b18903e7329  
+Sources:  
+
 https://developer.nvidia.com/blog/detecting-objects-in-point-clouds-using-ros-2-and-tao-pointpillars/  
 https://www.stereolabs.com/docs/ros2/depth-sensing/  
 https://github.com/IntelRealSense/librealsense/tree/development/wrappers/python/examples  
-https://github.com/google/mediapipe/blob/master/docs/solutions/objectron.md  
+http://www.open3d.org/docs/release/tutorial/geometry/pointcloud.html  
+https://academy.visualcomponents.com/lessons/import-point-cloud-with-python-api/  
+https://www.youtube.com/watch?v=HIRj5pH2t-Y  
+
+https://github.com/google/mediapipe/blob/master/docs/solutions/  
+https://github.com/googlesamples/mediapipe/tree/main/examples  
 https://developers.google.com/mediapipe/solutions/guide  
+
+https://github.com/ultralytics/ultralytics/issues/2028  
+  
+https://jeffzzq.medium.com/ros2-image-pipeline-tutorial-3b18903e7329  
 https://medium.com/@regis.loeb/playing-with-point-clouds-for-3d-object-detection-eff1d98e526a  
 https://medium.com/yodayoda/from-depth-map-to-point-cloud-7473721d3f  
-
-
+  
+http://www.diva-portal.org/smash/get/diva2:1245296/FULLTEXT01.pdf  
+http://www.open3d.org/docs/release/tutorial/geometry/rgbd_image.html  
+https://github.com/jamohile/stereoscopic-point-clouds  
+https://github.com/strawlab/python-pcl  
+https://towardsdatascience.com/how-to-use-pointnet-for-3d-computer-vision-in-an-industrial-context-3568ba37327e  
 
 2. Développement de l'API de Vision 3D
 
@@ -50,3 +63,5 @@ https://medium.com/yodayoda/from-depth-map-to-point-cloud-7473721d3f
     - TensorFlow ou PyTorch : Deep Learning, modèles traitant les données 3D
     - PCL (Point Cloud Library) : Traitement des données de points cloud
     - OpenCV : Traitement d'image et la vision par ordinateur
+    - YOLOv8 : Reconnaissance d'objets, personnes
+    - Mediapipe : Pareil que YOLOv8 mais la solution de pose/posture n'est limitée qu'à une seule personne trackée
