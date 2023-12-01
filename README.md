@@ -8,28 +8,37 @@ Tanguy FROUIN 5IRC
 
 Sources:  
 
+- Point clouds
 https://developer.nvidia.com/blog/detecting-objects-in-point-clouds-using-ros-2-and-tao-pointpillars/  
 https://www.stereolabs.com/docs/ros2/depth-sensing/  
 https://github.com/IntelRealSense/librealsense/tree/development/wrappers/python/examples  
 http://www.open3d.org/docs/release/tutorial/geometry/pointcloud.html  
 https://academy.visualcomponents.com/lessons/import-point-cloud-with-python-api/  
 https://www.youtube.com/watch?v=HIRj5pH2t-Y  
-
-https://github.com/google/mediapipe/blob/master/docs/solutions/  
-https://github.com/googlesamples/mediapipe/tree/main/examples  
-https://developers.google.com/mediapipe/solutions/guide  
-
-https://github.com/ultralytics/ultralytics/issues/2028  
-  
 https://jeffzzq.medium.com/ros2-image-pipeline-tutorial-3b18903e7329  
 https://medium.com/@regis.loeb/playing-with-point-clouds-for-3d-object-detection-eff1d98e526a  
 https://medium.com/yodayoda/from-depth-map-to-point-cloud-7473721d3f  
-  
 http://www.diva-portal.org/smash/get/diva2:1245296/FULLTEXT01.pdf  
 http://www.open3d.org/docs/release/tutorial/geometry/rgbd_image.html  
 https://github.com/jamohile/stereoscopic-point-clouds  
 https://github.com/strawlab/python-pcl  
 https://towardsdatascience.com/how-to-use-pointnet-for-3d-computer-vision-in-an-industrial-context-3568ba37327e  
+
+- Mediapipe  
+https://github.com/google/mediapipe/blob/master/docs/solutions/  
+https://github.com/googlesamples/mediapipe/tree/main/examples  
+https://developers.google.com/mediapipe/solutions/guide  
+
+- Ultralytics  
+https://github.com/ultralytics/ultralytics/issues/2028  
+  
+- Intel RealSense  
+https://github.com/IntelRealSense/librealsense  
+https://github.com/IntelRealSense/realsense-ros  
+https://dev.intelrealsense.com/docs/python2  
+https://www.intelrealsense.com/developers/  
+
+
 
 2. Développement de l'API de Vision 3D
 
@@ -65,3 +74,9 @@ https://towardsdatascience.com/how-to-use-pointnet-for-3d-computer-vision-in-an-
     - OpenCV : Traitement d'image et la vision par ordinateur
     - YOLOv8 : Reconnaissance d'objets, personnes
     - Mediapipe : Pareil que YOLOv8 mais la solution de pose/posture n'est limitée qu'à une seule personne trackée
+    - Rviz
+
+8. Installation
+- Créer un workspace ROS2 Humble
+- Dans `ros2_humble_ws/src`, `git clone https://github.com/IntelRealSense/realsense-ros.git`
+- ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=true align_depth.enable:=true

@@ -5,7 +5,7 @@ mp_drawing_styles = mp.solutions.drawing_styles
 mp_holistic = mp.solutions.holistic
 
 
-cap = cv2.VideoCapture(2)
+cap = cv2.VideoCapture("/dev/video4")
 with mp_holistic.Holistic(
     model_complexity = 1,
     enable_segmentation = True,

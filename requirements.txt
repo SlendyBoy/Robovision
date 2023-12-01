@@ -1,0 +1,5 @@
+numpy
+ultralytics
+opencv-python
+mediapipe
+pyrealsense2

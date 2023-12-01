@@ -4,7 +4,7 @@ from ultralytics import YOLO
 # Load the YOLOv8 model
 model = YOLO('yolov8m.pt')
 
-cap = cv2.VideoCapture("/dev/video4")
+cap = cv2.VideoCapture(2)
 
 # Loop through the video frames
 while cap.isOpened():
