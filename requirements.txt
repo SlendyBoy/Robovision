@@ -3,3 +3,4 @@ ultralytics
 opencv-python
 mediapipe
 pyrealsense2
+open3d

@@ -77,6 +77,66 @@ https://www.intelrealsense.com/developers/
     - Rviz
 
 8. Installation
-- Créer un workspace ROS2 Humble
-- Dans `ros2_humble_ws/src`, `git clone https://github.com/IntelRealSense/realsense-ros.git`
-- ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=true align_depth.enable:=true
+
+- Installer le SDK d'Intel® RealSense™
+```bash
+sudo apt install ros-humble-librealsense2*
+```
+
+- Installer le wrapper Intel® RealSense™ ROS2
+
+```bash
+mkdir -p ~/ros2__humble_ws/src
+cd ~/ros2_humble_ws/src/
+```
+
+- Clone le wrapper ROS2 Intel® RealSense™ dans le ws
+```bash
+git clone https://github.com/IntelRealSense/realsense-ros.git -b ros2-development
+cd ~/ros2_humble_ws
+```
+
+- Installer les dépendences
+```bash
+sudo apt-get install python3-rosdep -y
+sudo rosdep init
+rosdep update
+rosdep install -i --from-path src --rosdistro humble --skip-keys=librealsense2 -y
+```
+Normalement si toutes les dépendances sont installées le terminal affiche:
+```
+#All required rosdeps installed successfully
+```
+
+Build:
+```bash
+colcon build
+```
+
+- Si le build ne passe pas:
+
+```bash
+source install/setup.bash
+colcon build
+source install/setup.bash 
+colcon build
+rosdep install -i --from-path src --rosdistro humble -y
+sudo apt-get update
+rosdep install -i --from-path src --rosdistro humble -y
+colcon build
+source /opt/ros/humble/setup.bash 
+source install/setup.bash 
+colcon build
+source /opt/ros/humble/setup.bash 
+source install/setup.bash
+```
+
+- Lancer le noeud de la camera dans un terminal
+```bash
+ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=true align_depth.enable:=true
+```
+
+- Lancer Rviz dans un autre terminal
+```bash
+rviz2
+```
