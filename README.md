@@ -8,7 +8,7 @@ Tanguy FROUIN 5IRC
 
 Sources:  
 
-- Point clouds
+- Point clouds  
 https://developer.nvidia.com/blog/detecting-objects-in-point-clouds-using-ros-2-and-tao-pointpillars/  
 https://www.stereolabs.com/docs/ros2/depth-sensing/  
 https://github.com/IntelRealSense/librealsense/tree/development/wrappers/python/examples  
@@ -78,6 +78,11 @@ https://www.intelrealsense.com/developers/
 
 8. Installation
 
+- Environnement de dev
+Ubuntu 22.04
+ROS2 Humble
+Python 3.10
+
 - Installer le SDK d'Intel® RealSense™
 ```bash
 sudo apt install ros-humble-librealsense2*
@@ -136,7 +141,7 @@ source install/setup.bash
 ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=true align_depth.enable:=true
 ```
 
-- Lancer pt_cloud_sub
+- Lancer pt_cloud_sub (traitement nuage de points)
 ```bash
 ros2 run pt_cloud_sub pt_cloud_sub
 ```
