@@ -86,7 +86,7 @@ sudo apt install ros-humble-librealsense2*
 - Installer le wrapper Intel® RealSense™ ROS2
 
 ```bash
-mkdir -p ~/ros2__humble_ws/src
+mkdir -p ~/ros2_humble_ws/src
 cd ~/ros2_humble_ws/src/
 ```
 
@@ -136,7 +136,12 @@ source install/setup.bash
 ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=true align_depth.enable:=true
 ```
 
-- Lancer Rviz dans un autre terminal
+- Lancer pt_cloud_sub
+```bash
+ros2 run pt_cloud_sub pt_cloud_sub
+```
+
+- Lancer Rviz dans un autre terminal (optionnel)
 ```bash
 rviz2
 ```
