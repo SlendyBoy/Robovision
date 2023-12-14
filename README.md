@@ -78,10 +78,13 @@ https://www.intelrealsense.com/developers/
 
 8. Installation
 
-- Environnement de dev
-Ubuntu 22.04
-ROS2 Humble
-Python 3.10
+- Environnement de dev  
+Ubuntu 22.04  
+ROS2 Humble  
+Python 3.10  
+numpy 1.26.2  
+ultralytics 8.0.227  
+opencv-python 4.8.0.74  
 
 - Installer le SDK d'Intel® RealSense™
 ```bash
