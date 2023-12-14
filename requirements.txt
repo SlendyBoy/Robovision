@@ -1,6 +1,3 @@
-numpy
-ultralytics
-opencv-python
-mediapipe
-pyrealsense2
-open3d
+numpy==1.26.2
+ultralytics==8.0.227
+opencv-python==4.8.0.74

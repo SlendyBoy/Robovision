@@ -18,7 +18,10 @@ class PointCloudProcessor(Node):
 
         self.zoom_factor = 1  # niveau de zoom de base (100%)
         self.max_point_size = 2 # Attribut taille points
-        cv2.namedWindow("Carte de profondeur coloriée")
+
+        #cv2.namedWindow("Carte de profondeur RGB", cv2.WINDOW_AUTOSIZE | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_NORMAL)
+        cv2.namedWindow("Carte de profondeur RGB")
+        cv2.setMouseCallback("Carte de profondeur RGB", self.zoom_callback)
 
         self.use_fixed_limits = True  # Commencer avec le mode 'avec limites'
 
@@ -110,8 +113,6 @@ class PointCloudProcessor(Node):
         #cv2.imshow('Carte de profondeur', depth_map)
 
         
-        cv2.setMouseCallback("Carte de profondeur coloriée", self.zoom_callback)
-
         # Appliquer le zoom
         zoom_color_depth = self.apply_zoom(colored_depth_map)
 
@@ -122,7 +123,7 @@ class PointCloudProcessor(Node):
         self.cv2_txt(zoom_color_depth, f'Pt size: {self.max_point_size}', 110, 60, 0.4)
         self.cv2_txt(zoom_color_depth, f"Mode: {'limit' if self.use_fixed_limits else 'no limit'}", 220, 60, 0.4)
 
-        cv2.imshow('Carte de profondeur coloriée', zoom_color_depth)
+        cv2.imshow('Carte de profondeur RGB', zoom_color_depth)
 
         # Gérer les entrées clavier
         key = cv2.waitKey(1) & 0xFF
