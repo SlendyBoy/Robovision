@@ -12,7 +12,11 @@ Sources:
 https://developer.nvidia.com/blog/detecting-objects-in-point-clouds-using-ros-2-and-tao-pointpillars/  
 https://www.stereolabs.com/docs/ros2/depth-sensing/  
 https://github.com/IntelRealSense/librealsense/tree/development/wrappers/python/examples  
-http://www.open3d.org/docs/release/tutorial/geometry/pointcloud.html  
+https://github.com/jamohile/stereoscopic-point-clouds  
+https://github.com/heremaps/pptk  
+https://github.com/strawlab/python-pcl  
+https://github.com/ros-perception/perception_pcl  
+https://index.ros.org/p/pcl_ros/#humble  
 https://academy.visualcomponents.com/lessons/import-point-cloud-with-python-api/  
 https://www.youtube.com/watch?v=HIRj5pH2t-Y  
 https://jeffzzq.medium.com/ros2-image-pipeline-tutorial-3b18903e7329  
@@ -20,17 +24,26 @@ https://medium.com/@regis.loeb/playing-with-point-clouds-for-3d-object-detection
 https://medium.com/yodayoda/from-depth-map-to-point-cloud-7473721d3f  
 http://www.diva-portal.org/smash/get/diva2:1245296/FULLTEXT01.pdf  
 http://www.open3d.org/docs/release/tutorial/geometry/rgbd_image.html  
-https://github.com/jamohile/stereoscopic-point-clouds  
-https://github.com/strawlab/python-pcl  
+http://www.open3d.org/docs/release/tutorial/geometry/pointcloud.html  
 https://towardsdatascience.com/how-to-use-pointnet-for-3d-computer-vision-in-an-industrial-context-3568ba37327e  
+
 
 - Mediapipe  
 https://github.com/google/mediapipe/blob/master/docs/solutions/  
 https://github.com/googlesamples/mediapipe/tree/main/examples  
 https://developers.google.com/mediapipe/solutions/guide  
 
+- OpenPose  
+https://github.com/CMU-Perceptual-Computing-Lab/openpose  
+https://cmu-perceptual-computing-lab.github.io/openpose/web/html/doc/md_doc_00_index.html  
+https://github.com/ZheC/tf-pose-estimation  
+https://github.com/Daniil-Osokin/lightweight-human-pose-estimation.pytorch  
+https://github.com/firephinx/openpose_ros  
+https://github.com/ravijo/ros_openpose  
+
 - Ultralytics  
 https://github.com/ultralytics/ultralytics/issues/2028  
+https://docs.ultralytics.com/  
   
 - Intel RealSense  
 https://github.com/IntelRealSense/librealsense  
@@ -39,66 +52,64 @@ https://dev.intelrealsense.com/docs/python2
 https://www.intelrealsense.com/developers/  
 
 
+2. Liste des fonctionnalités
+a. [x] test
+b. [ ] test2
+    1. [ ] Sub-task 1
+    2. [x] Sub-task 2
 
-2. Développement de l'API de Vision 3D
 
-    - Conception de l'API : API générique qui peut traiter les données de différentes caméras 3D. Cette API devra être capable d'interfacer avec ROS2 et de traiter les données de point cloud.
-    - Abstraction de la caméra : traiter les données de la caméra de manière générique, permettant de se connecter à différentes caméras 3D.
+3. Représentation des noeuds ROS2
+```mermaid
+graph LR
+    realsense2_camera["Noeud: realsense2_camera"]
+    pointcloud_proc["Noeud: pointcloud_proc"]
+    vision_obj_pers["Noeud: vision_obj_pers"]
+    
+    realsense2_camera -- "/camera/camera/color/image_raw" --> vision_obj_pers
+    realsense2_camera -- "/camera/camera/depth/color/points" --> pointcloud_proc
+```
 
-3. Traitement des Données de Point Cloud
+4. Description de l'algo
 
-    - Prétraitement
-    - Extraction des caractéristiques : Deep learning pour identifier et caractériser les personnes (TF, attributs, posture) et les objets (TF, classification taxonomique).
 
-4. Reconnaissance et caractérisation
-
-    - Détection de personnes et d'objets : CNN adaptés aux données 3D pour la détection et la classification.
-    - Estimation des attributs et postures : Pareil pour estimer les attributs des personnes et leur posture.
-
-5. Intégration avec ROS2
-
-    - Noeuds ROS2 : intègrent l'API de vision 3D et fait le lien avec les fonctions de ROS2
-    - Tests et calibration : Test avec la caméra 3D couleurs Intel RealSense D455 et voire Kinect
-
-6. Documentation et Tests
-
-    - Documentation
-    - Tests avec différentes caméras pour valider l'approche générique
-
-7. Technologies et outils potentiels
+5. Technologies et outils potentiels
 
     - ROS2 : Intégration et communication
     - Python : API et algorithmes
-    - TensorFlow ou PyTorch : Deep Learning, modèles traitant les données 3D
-    - PCL (Point Cloud Library) : Traitement des données de points cloud
-    - OpenCV : Traitement d'image et la vision par ordinateur
+    - OpenCV : Traitement d'image et visualisation côté utilisateur
     - YOLOv8 : Reconnaissance d'objets, personnes
-    - Mediapipe : Pareil que YOLOv8 mais la solution de pose/posture n'est limitée qu'à une seule personne trackée
-    - Rviz
-
-8. Installation
-
+    - Rviz : visualisation des topics côté ROS2  
+  
+6. Pré-requis
 - Environnement de dev  
-Ubuntu 22.04  
-ROS2 Humble  
-Python 3.10  
-numpy 1.26.2  
-ultralytics 8.0.227  
-opencv-python 4.8.0.74  
+  - Ubuntu 22.04  
+  - ROS2 Humble  
+  - Python 3.10  
+  - numpy 1.26.2  
+  - ultralytics 8.0.227  
+  - opencv-python 4.8.0.74  
+
+7. Installation
+
+- Installer les librairies
+```bash
+pip install -r requirements.txt
+```
 
 - Installer le SDK d'Intel® RealSense™
 ```bash
 sudo apt install ros-humble-librealsense2*
 ```
 
-- Installer le wrapper Intel® RealSense™ ROS2
-
+- Création du workspace ROS2 Humble
 ```bash
 mkdir -p ~/ros2_humble_ws/src
 cd ~/ros2_humble_ws/src/
 ```
 
-- Clone le wrapper ROS2 Intel® RealSense™ dans le ws
+- Installer le wrapper Intel® RealSense™ ROS2
+Clone dans `src`:
 ```bash
 git clone https://github.com/IntelRealSense/realsense-ros.git -b ros2-development
 cd ~/ros2_humble_ws
@@ -116,12 +127,13 @@ Normalement si toutes les dépendances sont installées le terminal affiche:
 #All required rosdeps installed successfully
 ```
 
-Build:
+Toujours dans le workspace humble, build et source:
 ```bash
 colcon build
+source install/setup.bash
 ```
 
-- Si le build ne passe pas:
+- Si le build ne passe pas (selon mon historique de commandes):
 
 ```bash
 source install/setup.bash
@@ -139,17 +151,24 @@ source /opt/ros/humble/setup.bash
 source install/setup.bash
 ```
 
+- Placer le package `ROS2/robovision_ros` dans `ros2_humble_ws/src/`
+Build et source
+```bash
+colcon build
+source install/setup.bash
+```
+
 - Lancer le noeud de la camera dans un terminal
 ```bash
 ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=true align_depth.enable:=true
 ```
 
-- Lancer pt_cloud_sub (traitement nuage de points)
+- Lancer les noeuds du package dans un autre terminal
 ```bash
-ros2 run pt_cloud_sub pt_cloud_sub
+ros2 launch robovision_ros launch.py
 ```
 
-- Lancer Rviz dans un autre terminal (optionnel)
+- Lancer Rviz dans un autre terminal
 ```bash
 rviz2
 ```

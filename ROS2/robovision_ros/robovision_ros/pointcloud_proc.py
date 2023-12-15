@@ -2,42 +2,35 @@ import numpy as np
 import cv2
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import PointCloud2, Image
+from sensor_msgs.msg import PointCloud2
 import sensor_msgs_py.point_cloud2 as pc2
 import time
-from cv_bridge import CvBridge
 
 class PointCloudProcessor(Node):
     def __init__(self):
 
-        super().__init__('point_cloud_processor') #noeud
+        super().__init__('pointcloud_proc') #noeud
 
 
         self.last_time_pc = time.time()  # Initialiser last FPS
-        self.bridge = CvBridge()
 
         self.zoom_factor = 1  # niveau de zoom de base (100%)
-        self.max_point_size = 2 # Attribut taille points
-
-        #cv2.namedWindow("Carte de profondeur RGB", cv2.WINDOW_AUTOSIZE | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_NORMAL)
-        cv2.namedWindow("Carte de profondeur RGB")
-        cv2.setMouseCallback("Carte de profondeur RGB", self.zoom_callback)
-
+        self.max_point_size = 2 # Attribut taille points PC
         self.use_fixed_limits = True  # Commencer avec le mode 'avec limites'
 
-        # les subs
+        cv2.namedWindow("Carte de profondeur RGB", cv2.WINDOW_AUTOSIZE | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_NORMAL)
+        cv2.setMouseCallback("Carte de profondeur RGB", self.zoom_callback)
+        
+
+        # subs PC
         self.subscription_pt_cloud = self.create_subscription(
             PointCloud2,
             '/camera/camera/depth/color/points',
             self.listener_pointcloud,
             10)
-        
-        self.subscription_camera_rgb = self.create_subscription(
-            Image,
-            '/camera/camera/color/image_raw',
-            self.listener_cam,
-            10
-        )
+
+    def cv2_txt(self, frame, txt, x, y, size):
+        cv2.putText(frame, txt, (x, y), cv2.FONT_HERSHEY_SIMPLEX, size, (0, 255, 0), 1, cv2.LINE_AA)
 
     def zoom_callback(self, event, x, y, flags, param):
 
@@ -66,21 +59,6 @@ class PointCloudProcessor(Node):
         return zoomed_img
         
 
-    def listener_cam(self, msg):
-
-        try:
-            # Convertir le message ROS en une image OpenCV
-            cam = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-            cv2.imshow("Camera Image", cam)
-            cv2.waitKey(1)
-        except Exception as e:
-            self.get_logger().error('Erreur lors de la conversion de l\'image ROS en image OpenCV: %r' % (e,))
-
-    def cv2_txt(self, frame, txt, x, y, size):
-        cv2.putText(frame, txt, (x, y), cv2.FONT_HERSHEY_SIMPLEX, size, (0, 255, 0), 1, cv2.LINE_AA)
-        
-
-
     def listener_pointcloud(self, msg):
 
         current_time = time.time()
@@ -105,14 +83,7 @@ class PointCloudProcessor(Node):
 
         # Application de la carte de couleurs
         colored_depth_map = self.apply_colormap_to_depth_map(depth_map)
-
-        # Détection d'objets ici à faire
-
-        # Affichage des différentes vues
-        #cv2.imshow('Détection objets', ...)
-        #cv2.imshow('Carte de profondeur', depth_map)
-
-        
+ 
         # Appliquer le zoom
         zoom_color_depth = self.apply_zoom(colored_depth_map)
 
