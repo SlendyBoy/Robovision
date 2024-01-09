@@ -160,7 +160,7 @@ source install/setup.bash
 
 - Lancer le noeud de la camera dans un terminal
 ```bash
-ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=true align_depth.enable:=true
+ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=true align_depth.enable:=true pointcloud.ordered_pc:=true
 ```
 
 - Lancer les noeuds du package dans un autre terminal

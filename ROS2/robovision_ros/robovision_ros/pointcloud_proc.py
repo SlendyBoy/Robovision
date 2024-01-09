@@ -5,7 +5,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import PointCloud2, Image
 import sensor_msgs_py.point_cloud2 as pc2
 import time
-from cv_bridge import CvBridge
+from cv_bridge import CvBridge, CvBridgeError
 
 class PointCloudProcessor(Node):
     def __init__(self):
@@ -20,12 +20,9 @@ class PointCloudProcessor(Node):
         self.zoom_factor = 1  # niveau de zoom de base (100%)
         self.max_point_size = 2 # Attribut taille points PC
         self.use_fixed_limits = True  # Commencer avec le mode 'avec limites'
+        self.last_center_depth = 10000 # profondeur centre
+        self.last_zone_depth = 10000 # profondeur zone
 
-        self.camera_intrinsics = np.array([
-            [641.3475952148438, 0.0, 651.397705078125],
-            [0.0, 639.782958984375, 359.14453125],
-            [0.0, 0.0, 1.0]
-        ])
         self.depth_intrinsics = np.array([
             [427.3677673339844, 0.0, 428.515625],
             [0.0, 427.3677673339844, 237.0117950439453],
@@ -35,7 +32,8 @@ class PointCloudProcessor(Node):
                                     0.06541391462087631, 
                                     -0.0005386002594605088, 
                                     0.0006388379260897636, 
-                                    -0.021308405324816704])
+                                    -0.021308405324816704
+        ])
         
         self.camera_matrix = np.array([
             [641.3475952148438, 0.0, 651.397705078125], 
@@ -51,8 +49,8 @@ class PointCloudProcessor(Node):
         ])
         self.translation_vector = np.array([-0.05912087857723236, 0.0001528092980151996, 6.889161159051582e-05])
 
-        cv2.namedWindow("Carte de profondeur RGB", cv2.WINDOW_AUTOSIZE | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_NORMAL)
-        cv2.setMouseCallback("Carte de profondeur RGB", self.zoom_callback)
+        cv2.namedWindow("Pointcloud RGB", cv2.WINDOW_AUTOSIZE | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_NORMAL)
+        cv2.setMouseCallback("Pointcloud RGB", self.zoom_callback)
         
 
         # subs PC
@@ -66,6 +64,16 @@ class PointCloudProcessor(Node):
             Image,
             '/camera/camera/color/image_raw',
             self.listener_rgb_image,
+            10)
+        
+        self.depth_image_raw_pub = self.create_publisher(
+            Image, 
+            '/robovision/depth/raw', 
+            10)
+        
+        self.depth_image_color_pub = self.create_publisher(
+            Image, 
+            '/robovision/depth/color', 
             10)
         
 
@@ -104,7 +112,7 @@ class PointCloudProcessor(Node):
         self.rgb_image = cv2.undistort(self.rgb_image, self.camera_matrix, self.dist_coeffs)
 
 
-
+    # pointcloud sur image RGB
     def overlay_points_on_image(self, points_2d):
         # Créer un masque vide
         mask = np.zeros(self.rgb_image.shape, dtype=np.uint8)
@@ -115,7 +123,6 @@ class PointCloudProcessor(Node):
 
         # Compter le nombre de points valides
         num_valid_points = np.sum(valid_points)
-        print(f"Nombre de points valides affichés : {num_valid_points}")
 
         # Coordonnées des points valides
         valid_points_2d = points_2d[valid_points].astype(int)
@@ -128,23 +135,7 @@ class PointCloudProcessor(Node):
 
         cv2.imshow('RGB with Point Cloud Overlay', overlayed_image)
 
-    def create_depth_image(self, points_3d, points_2d):
-        depth_image = np.full(self.rgb_image.shape[:2], np.inf, dtype=np.float32)
-
-        # Assurer que les points sont dans les limites de l'image
-        valid_points = (0 <= points_2d[:, 0]) & (points_2d[:, 0] < self.rgb_image.shape[1]) & \
-                    (0 <= points_2d[:, 1]) & (points_2d[:, 1] < self.rgb_image.shape[0])
-
-        # Coordonnées et valeurs de profondeur valides
-        valid_points_2d = points_2d[valid_points].astype(int)
-        valid_z = points_3d[valid_points][:, 2]  # Extraire la composante z
-
-        # Remplir l'image de profondeur
-        depth_image[valid_points_2d[:, 1], valid_points_2d[:, 0]] = valid_z
-
-        return depth_image
-
-
+    
     def project_points_to_image(self, points_3d):
         # Extraire les champs x, y, z et les aplatir
         x = points_3d['x'].flatten()
@@ -163,12 +154,101 @@ class PointCloudProcessor(Node):
 
         # Effectuer la multiplication matricielle
         # Retirer la quatrième dimension (les ones cf ci-dessus) avant de multiplier
-        points_2d_homogeneous = np.dot(self.camera_intrinsics, points_3d_homogeneous[:, :3].T).T
+        points_2d_homogeneous = np.dot(self.camera_matrix, points_3d_homogeneous[:, :3].T).T
 
         # Normaliser pour obtenir les coordonnées u, v
         points_2d = points_2d_homogeneous[:, :2] / points_2d_homogeneous[:, 2:]
 
         return points_2d
+    
+    def publish_depth_image_raw(self, depth_image):
+        try:
+            # Convertir l'image de profondeur raw en un message ROS
+            depth_image_raw_msg = self.bridge.cv2_to_imgmsg(depth_image, "32FC1")
+            self.depth_image_raw_pub.publish(depth_image_raw_msg)
+        except CvBridgeError as e:
+            print(e)
+
+
+    def publish_depth_image_color(self, depth_image):
+        try:
+            # Convertir l'image de profondeur RGB en un message ROS
+            depth_image_color_msg = self.bridge.cv2_to_imgmsg(depth_image, "bgr8")
+            self.depth_image_color_pub.publish(depth_image_color_msg)
+        except CvBridgeError as e:
+            print(e)
+
+
+    # depth image
+    def create_depth_image(self, points_3d, points_2d):
+        depth_image = np.full(self.rgb_image.shape[:2], 10000, dtype=np.float32)
+
+        # Reformatage de points_3d pour correspondre à la forme de points_2d
+        x = points_3d['x'].flatten()
+        y = points_3d['y'].flatten()
+        z = points_3d['z'].flatten()
+
+        points_3d_reshaped = np.column_stack((x, y, z))
+
+        # Assurer que les points sont dans les limites de l'image
+        valid_points = (0 <= points_2d[:, 0]) & (points_2d[:, 0] < self.rgb_image.shape[1]) & \
+                    (0 <= points_2d[:, 1]) & (points_2d[:, 1] < self.rgb_image.shape[0])
+
+        # Coordonnées et valeurs de profondeur valides
+        valid_points_2d = points_2d[valid_points].astype(int)
+        valid_z = points_3d_reshaped[valid_points][:, 2]  # Extraire la composante z
+
+        # Remplir l'image de profondeur
+        depth_image[valid_points_2d[:, 1], valid_points_2d[:, 0]] = valid_z
+
+        return depth_image
+    
+
+    def display_depth_image(self, depth_image):
+        # Exclure les valeurs sans données pour trouver la plage de normalisation
+        min_depth = np.min(depth_image[depth_image != 10000])
+        max_depth = np.max(depth_image[depth_image != 10000])
+
+        # Inverser la normalisation pour que les objets proches soient rouges
+        depth_normalized = np.clip((max_depth - depth_image) / (max_depth - min_depth), 0, 1)
+        depth_normalized = (depth_normalized * 255).astype(np.uint8)
+
+        # Définir les pixels sans données sur noir (valeur 0)
+        depth_normalized[depth_image == 10000] = 0
+
+        # Appliquer une colormap
+        depth_colormap = cv2.applyColorMap(depth_normalized, cv2.COLORMAP_JET)
+
+        self.publish_depth_image_color(depth_colormap) # Publier l'image de profondeur RGB
+
+        cv2.imshow('Depth Image', depth_colormap)
+
+
+    def get_depth_at_center(self, depth_image):
+        center_x = depth_image.shape[1] // 2
+        center_y = depth_image.shape[0] // 2
+        depth_at_center = depth_image[center_y, center_x]
+
+        if depth_at_center != 10000:
+            self.last_center_depth = depth_at_center
+
+        return self.last_center_depth
+
+    def get_average_depth_in_zone(self, depth_image, x_min, x_max, y_min, y_max):
+
+        # Extraire la zone spécifiée de l'image de profondeur
+        depth_zone = depth_image[y_min:y_max, x_min:x_max]
+
+        # Créer un masque pour exclure les valeurs de 10000 (absence de données)
+        valid_depth_mask = depth_zone != 10000
+
+        # Calculer la moyenne en excluant les valeurs de 10000
+        if np.any(valid_depth_mask):
+            self.last_zone_depth = np.mean(depth_zone[valid_depth_mask])
+        else:
+            self.last_zone_depth = self.last_zone_depth  # Aucune valeur valide dans la zone
+
+        return self.last_zone_depth
 
     def listener_pointcloud(self, msg):
 
@@ -182,18 +262,22 @@ class PointCloudProcessor(Node):
         points = pc2.read_points(msg, field_names=("x", "y", "z"), skip_nans=False, reshape_organized_cloud=True)
 
         if self.rgb_image is not None:
-            # Projetons les points sur l'image RGB
+            # Projeter les points sur l'image RGB
             points_2d = self.project_points_to_image(points)
             self.overlay_points_on_image(points_2d)
 
-        """# Créer une carte de profondeur
-        depth_map = self.create_depth_map(points)
+            depth_image = self.create_depth_image(points, points_2d)
+            self.publish_depth_image_raw(depth_image) # Publier l'image de profondeur raw
+            self.display_depth_image(depth_image)
+
+        """# pointcloud
+        pointcloud = self.create_pointcloud(points)
 
         # Application de la carte de couleurs
-        colored_depth_map = self.apply_colormap_to_depth_map(depth_map)
+        colored_pointcloud = self.apply_colormap_to_pointcloud(pointcloud)
  
         # Appliquer le zoom
-        zoom_color_depth = self.apply_zoom(colored_depth_map)
+        zoom_color_depth = self.apply_zoom(colored_pointcloud)
 
         # Afficher les FPS
         self.cv2_txt(zoom_color_depth, f'FPS: {round(fps, 2)}', 10, 30, 1)
@@ -202,7 +286,7 @@ class PointCloudProcessor(Node):
         self.cv2_txt(zoom_color_depth, f'Pt size: {self.max_point_size}', 110, 60, 0.4)
         self.cv2_txt(zoom_color_depth, f"Mode: {'limit' if self.use_fixed_limits else 'no limit'}", 220, 60, 0.4)
 
-        cv2.imshow('Carte de profondeur RGB', zoom_color_depth)"""
+        cv2.imshow('Pointcloud RGB', zoom_color_depth)"""
 
         # Gérer les entrées clavier
         key = cv2.waitKey(1) & 0xFF
@@ -214,7 +298,7 @@ class PointCloudProcessor(Node):
             self.use_fixed_limits = not self.use_fixed_limits # modif mode limite
         
 
-    def create_depth_map(self, pcd):
+    def create_pointcloud(self, pcd):
 
         x_values = np.array(pcd['x'], dtype=np.float32)
         y_values = np.array(pcd['y'], dtype=np.float32)
@@ -246,7 +330,7 @@ class PointCloudProcessor(Node):
             z_normalized = z_normalized.astype(np.uint8)
 
             # Init de la carte vide et remplissage
-            depth_image = np.zeros((img_height, img_width), dtype=np.uint8)
+            pc_image = np.zeros((img_height, img_width), dtype=np.uint8)
 
         else:
             # SANS LIMITES
@@ -265,7 +349,7 @@ class PointCloudProcessor(Node):
             z_normalized = z_normalized.astype(np.uint8)
 
             # Créer une image de profondeur vide
-            depth_image = np.zeros((img_height, img_width), dtype=np.uint8)
+            pc_image = np.zeros((img_height, img_width), dtype=np.uint8)
 
 
         # Calculer la taille des points en fonction de leur profondeur normalisée
@@ -280,7 +364,7 @@ class PointCloudProcessor(Node):
             kernel = np.ones((int(size), int(size)), np.uint8)
 
             # Image temporaire
-            points_to_dilate = np.zeros_like(depth_image)
+            points_to_dilate = np.zeros_like(pc_image)
 
             # Assigner les valeurs normalisées de Z aux points qui correspondent à la taille de kernel actuelle
             points_to_dilate[y_indices[point_sizes == size], x_indices[point_sizes == size]] = z_normalized[point_sizes == size]
@@ -290,20 +374,20 @@ class PointCloudProcessor(Node):
 
             # MAJ l'image de profondeur originale avec les points dilatés
             # 'np.maximum' garantit que la valeur la plus élevée entre l'image de profondeur actuelle et les points dilatés est conservée
-            depth_image = np.maximum(depth_image, dilated_points)
+            pc_image = np.maximum(pc_image, dilated_points)
         
-        return depth_image
+        return pc_image
         
 
-    def apply_colormap_to_depth_map(self, depth_map):
+    def apply_colormap_to_pointcloud(self, pointcloud):
         # Normaliser la depth map (0-255)
-        normalized_depth = cv2.normalize(depth_map, None, 0, 255, cv2.NORM_MINMAX)
+        normalized_depth = cv2.normalize(pointcloud, None, 0, 255, cv2.NORM_MINMAX)
         normalized_depth = np.uint8(normalized_depth)
 
         # Appliquer la carte de couleurs
-        colored_depth_map = cv2.applyColorMap(normalized_depth, cv2.COLORMAP_JET)
+        colored_pointcloud = cv2.applyColorMap(normalized_depth, cv2.COLORMAP_JET)
 
-        return colored_depth_map
+        return colored_pointcloud
 
 def main(args=None):
     rclpy.init(args=args)
