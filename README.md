@@ -27,6 +27,13 @@ http://www.open3d.org/docs/release/tutorial/geometry/rgbd_image.html
 http://www.open3d.org/docs/release/tutorial/geometry/pointcloud.html  
 https://towardsdatascience.com/how-to-use-pointnet-for-3d-computer-vision-in-an-industrial-context-3568ba37327e  
 
+- Segmentation  
+https://docs.opencv.org/4.8.0/d1/d5c/tutorial_py_kmeans_opencv.html  
+https://thepythoncode.com/article/kmeans-for-image-segmentation-opencv-python  
+https://sites.google.com/view/aide-python/applications/traitements-et-analyses-dimages/k-means-sur-image-avec-opencv-pour-segmenter  
+https://www.kdnuggets.com/2019/08/introduction-image-segmentation-k-means-clustering.html  
+https://dev.to/andreygermanov/how-to-implement-instance-segmentation-using-yolov8-neural-network-3if9  
+
 
 - Mediapipe  
 https://github.com/google/mediapipe/blob/master/docs/solutions/  

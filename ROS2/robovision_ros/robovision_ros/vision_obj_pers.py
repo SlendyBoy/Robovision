@@ -7,11 +7,9 @@ import time
 from cv_bridge import CvBridge, CvBridgeError
 from ultralytics import YOLO
 
-
 # Load the YOLOv8 model
-model_obj = YOLO('yolov8m.pt')
 model_pose = YOLO('yolov8m-pose.pt')
-#model.fuse()
+model_seg = YOLO('yolov8m-seg.pt')
 
 class VisionObjPers(Node):
     def __init__(self):
@@ -22,7 +20,6 @@ class VisionObjPers(Node):
         self.bridge = CvBridge()
 
         self.zoom_factor = 1  # niveau de zoom de base (100%)
-        self.last_zone_depth = 10000
         self.depth_image = None
 
         self.depth_intrinsics = np.array([
@@ -51,7 +48,7 @@ class VisionObjPers(Node):
         ])
         self.translation_vector = np.array([-0.05912087857723236, 0.0001528092980151996, 6.889161159051582e-05])
 
-        cv2.namedWindow("Detection objets et posture", cv2.WINDOW_AUTOSIZE | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_NORMAL)
+        #cv2.namedWindow("Detection objets et posture", cv2.WINDOW_AUTOSIZE | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_NORMAL)
         
         self.camera_rgb_sub = self.create_subscription(
             Image,
@@ -97,7 +94,6 @@ class VisionObjPers(Node):
         return zoomed_img
         
 
-
     def project_points_to_image(self, points_3d):
         x = points_3d[:, 0].flatten()
         y = points_3d[:, 1].flatten()
@@ -127,7 +123,6 @@ class VisionObjPers(Node):
         return points_2d
         
 
-    
     def draw_3d_box(self, image, bbox_2d, depth):
         
         # bbox_2d: (x_min, y_min, x_max, y_max)
@@ -186,22 +181,6 @@ class VisionObjPers(Node):
             self.get_logger().info("Erreur dans la projection des points 3D en 2D")
 
 
-    def get_average_depth_in_zone(self, depth_image, x_min, x_max, y_min, y_max):
-
-        # Extraire la zone spécifiée de l'image de profondeur
-        depth_zone = depth_image[y_min:y_max, x_min:x_max]
-
-        # Créer un masque pour exclure les valeurs de 10000 (absence de données)
-        valid_depth_mask = depth_zone != 10000
-
-        # Calculer la moyenne en excluant les valeurs de 10000
-        if np.any(valid_depth_mask):
-            self.last_zone_depth = np.mean(depth_zone[valid_depth_mask])
-        else:
-            self.last_zone_depth = self.last_zone_depth  # Aucune valeur valide dans la zone
-
-        return self.last_zone_depth
-
     def depth_image_raw_callback(self, msg):
 
         try:
@@ -211,9 +190,39 @@ class VisionObjPers(Node):
             self.get_logger().error(f'Erreur de conversion CvBridge depth image: {e}')
 
 
-
     def undistort_image(self, image):
         return cv2.undistort(image, self.camera_matrix, self.dist_coeffs)
+    
+
+    def calculate_object_depth(self, depth_roi, object_mask):
+        object_depth = depth_roi[object_mask]
+        valid_depths = object_depth[object_depth != 10000]  # Exclure les valeurs sans données
+        if valid_depths.size > 0:
+            return np.mean(valid_depths)
+        else:
+            return None
+
+    
+    def calculate_and_display_object_depth(self, result, frame):
+
+        masks = result.masks.data.cpu().numpy()  # Masques (N, H, W)
+        mask = masks[0]
+
+        # Créer un masque booléen pour l'image de profondeur
+        depth_mask = (mask == 1)
+
+        # Extraire les valeurs de profondeur correspondantes
+        depth_values = self.depth_image[depth_mask]
+
+        # Calculer la profondeur moyenne ou médiane pour éviter les valeurs aberrantes
+        object_depth = np.median(depth_values[depth_values != 10000])  # Exclure les valeurs manquantes
+        
+        boxes = result.boxes.cpu().numpy()
+        x_min, y_min, x_max, y_max = map(int, boxes.xyxy[0])
+
+        label = f"Dist: {round( float(object_depth), 2)} m"
+        self.cv2_txt(frame, label, x_min, y_min - 28, 1)
+
 
 
     def listener_cam(self, msg):
@@ -232,46 +241,44 @@ class VisionObjPers(Node):
             # Appliquer la correction de distorsion sur l'image
             undistorted_frame = self.undistort_image(frame)
 
-            # YOLOv8 obj inference
-            results = model_obj(undistorted_frame, conf=0.5)
+            # Detection et segmentation
+            results_seg = model_seg(undistorted_frame, conf=0.4, verbose=False, retina_masks=True)
 
-            results_np = results[0].cpu().numpy()
+            seg_frame = results_seg[0].plot(boxes=True)
 
-            datas_frame = results_np.plot()
-
-            for result in results_np:
-                boxes = result.boxes
-                cls = boxes.cls
-
-                # Coordonnées de la bounding box (x_min, y_min, x_max, y_max)
-                x_min, y_min, x_max, y_max = boxes.xyxy[0]
-                x_min, y_min, x_max, y_max = int(x_min), int(y_min), int(x_max), int(y_max)
-
-                # Calculer la distance moyenne dans la bounding box
-                average_depth = self.get_average_depth_in_zone(self.depth_image, x_min, x_max, y_min, y_max)
-
-                # Afficher la distance au-dessus de la bounding box
-                label = f"Dist: {round(float(average_depth), 2)} m"
-                self.cv2_txt(datas_frame, label, x_min, y_min - 28, 1)
-
-                self.draw_3d_box(datas_frame, (x_min, y_min, x_max, y_max), average_depth)
+            for result in results_seg[0]:
+                self.calculate_and_display_object_depth(result, seg_frame)
 
 
-            #cv2.imshow("Detection objets", datas_frame)
+            """results_pose = model_pose(seg_frame, conf=0.5, verbose=True)
+            pose_frame = results_pose[0].plot(boxes=False)
+            self.cv2_txt(pose_frame, f'FPS: {round(fps, 2)}', 10, 30, 1)
+            cv2.imshow("Detection objets, segmentation et posture", pose_frame)"""
 
-            """# YOLOv8 pose inference
-            results_pose = model_pose(datas_frame, conf=0.5)
 
-            pose_frame = results_pose[0].plot()
+            # l'overlay marche de temps en temps, pas tout le temps (à certaines exe des noeuds), pas compris pourquoi
+            # Appliquer le modèle de pose sur undistorted_frame
+            results_pose = model_pose(undistorted_frame, conf=0.5, verbose=False)
+            
 
-            # Display the annotated frame
-            self.cv2_txt(pose_frame, f'FPS: {round(fps, 2)}', 10, 30, 1)"""
+            # Créer un overlay avec les résultats de pose
+            pose_overlay = np.zeros_like(seg_frame)
+            pose_frame = results_pose[0].plot(boxes=False)
 
-            cv2.imshow("Detection objets et posture", datas_frame)
+            
+
+            # Superposer l'overlay sur seg_frame
+            seg_frame_with_pose = cv2.addWeighted(seg_frame, 0.5, pose_frame, 0.5, 0)
+
+            # Afficher les FPS et autres informations sur l'overlay de pose
+            self.cv2_txt(seg_frame_with_pose, f'FPS: {round(fps, 2)}', 10, 30, 1)
+
+            # Afficher l'image finale
+            cv2.imshow("Detection objets, segmentation et posture", seg_frame_with_pose)
             cv2.waitKey(1)
 
         except Exception as e:
-            self.get_logger().error('Erreur lors de la conversion de l\'image ROS camera RGB en image OpenCV: %r' % (e,))
+            self.get_logger().error('Erreur : %r' % (e,))
 
 def main(args=None):
     rclpy.init(args=args)

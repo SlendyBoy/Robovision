@@ -49,8 +49,8 @@ class PointCloudProcessor(Node):
         ])
         self.translation_vector = np.array([-0.05912087857723236, 0.0001528092980151996, 6.889161159051582e-05])
 
-        cv2.namedWindow("Pointcloud RGB", cv2.WINDOW_AUTOSIZE | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_NORMAL)
-        cv2.setMouseCallback("Pointcloud RGB", self.zoom_callback)
+        #cv2.namedWindow("Pointcloud RGB", cv2.WINDOW_AUTOSIZE | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_NORMAL)
+        #cv2.setMouseCallback("Pointcloud RGB", self.zoom_callback)
         
 
         # subs PC
@@ -264,7 +264,7 @@ class PointCloudProcessor(Node):
         if self.rgb_image is not None:
             # Projeter les points sur l'image RGB
             points_2d = self.project_points_to_image(points)
-            self.overlay_points_on_image(points_2d)
+            #self.overlay_points_on_image(points_2d)
 
             depth_image = self.create_depth_image(points, points_2d)
             self.publish_depth_image_raw(depth_image) # Publier l'image de profondeur raw
