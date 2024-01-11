@@ -58,6 +58,9 @@ https://github.com/IntelRealSense/realsense-ros
 https://dev.intelrealsense.com/docs/python2  
 https://www.intelrealsense.com/developers/  
 
+- NumPy sur GPU (CuPy)  
+https://cupy.dev/  
+
 
 2. Liste des fonctionnalités
 a. [x] test
@@ -102,6 +105,38 @@ graph LR
 - Installer les librairies
 ```bash
 pip install -r requirements.txt
+```
+
+- Connaitre la version de CUDA  (plusieurs façons)
+```bash
+nvcc --version
+cat /usr/local/cuda/version.json
+ls -l /usr/local | grep cuda # cuda supposément installé dans /usr/local/cuda
+
+```
+
+- Installer la version de CuPy (NumPy sur GPU) selon la version de CUDA
+```bash
+# For CUDA 10.2
+pip install cupy-cuda102
+
+# For CUDA 11.0
+pip install cupy-cuda110
+
+# For CUDA 11.1
+pip install cupy-cuda111
+
+# For CUDA 11.2 ~ 11.x
+pip install cupy-cuda11x
+
+# For CUDA 12.x
+pip install cupy-cuda12x
+
+# For AMD ROCm 4.3
+pip install cupy-rocm-4-3
+
+# For AMD ROCm 5.0
+pip install cupy-rocm-5-0
 ```
 
 - Installer le SDK d'Intel® RealSense™

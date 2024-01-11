@@ -6,6 +6,7 @@ from sensor_msgs.msg import PointCloud2, Image
 import sensor_msgs_py.point_cloud2 as pc2
 import time
 from cv_bridge import CvBridge, CvBridgeError
+import cupy as cp
 
 class PointCloudProcessor(Node):
     def __init__(self):
@@ -23,31 +24,31 @@ class PointCloudProcessor(Node):
         self.last_center_depth = 10000 # profondeur centre
         self.last_zone_depth = 10000 # profondeur zone
 
-        self.depth_intrinsics = np.array([
+        self.depth_intrinsics = cp.array([
             [427.3677673339844, 0.0, 428.515625],
             [0.0, 427.3677673339844, 237.0117950439453],
             [0.0, 0.0, 1.0]
         ])
-        self.dist_coeffs = np.array([-0.05677277222275734, 
+        self.dist_coeffs = cp.array([-0.05677277222275734, 
                                     0.06541391462087631, 
                                     -0.0005386002594605088, 
                                     0.0006388379260897636, 
                                     -0.021308405324816704
         ])
         
-        self.camera_matrix = np.array([
+        self.camera_matrix = cp.array([
             [641.3475952148438, 0.0, 651.397705078125], 
             [0.0, 639.782958984375, 359.14453125], 
             [0.0, 0.0, 1.0]
         ])
 
         # Extrinsèques (rotation et translation) de la caméra de profondeur vers la caméra RGB
-        self.rotation_matrix = np.array([
+        self.rotation_matrix = cp.array([
             [0.9999995231628418, -0.0008866226417012513, 0.0003927878278773278], 
             [0.000888532551471144, 0.9999876618385315, -0.004889312665909529], 
             [-0.00038844801019877195, 0.004889659583568573, 0.9999879598617554]
         ])
-        self.translation_vector = np.array([-0.05912087857723236, 0.0001528092980151996, 6.889161159051582e-05])
+        self.translation_vector = cp.array([-0.05912087857723236, 0.0001528092980151996, 6.889161159051582e-05])
 
         #cv2.namedWindow("Pointcloud RGB", cv2.WINDOW_AUTOSIZE | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_NORMAL)
         #cv2.setMouseCallback("Pointcloud RGB", self.zoom_callback)
@@ -109,7 +110,26 @@ class PointCloudProcessor(Node):
 
     def listener_rgb_image(self, msg):
         self.rgb_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-        self.rgb_image = cv2.undistort(self.rgb_image, self.camera_matrix, self.dist_coeffs)
+        self.rgb_image = cv2.undistort(self.rgb_image, cp.asnumpy(self.camera_matrix), cp.asnumpy(self.dist_coeffs))
+
+
+    def publish_depth_image_raw(self, depth_image):
+        try:
+            # Convertir l'image de profondeur raw en un message ROS
+            depth_image_raw_msg = self.bridge.cv2_to_imgmsg(depth_image, "32FC1")
+            self.depth_image_raw_pub.publish(depth_image_raw_msg)
+        except CvBridgeError as e:
+            print(e)
+
+
+    def publish_depth_image_color(self, depth_image):
+        try:
+            # Convertir l'image de profondeur RGB en un message ROS
+            depth_image_color_msg = self.bridge.cv2_to_imgmsg(depth_image, "bgr8")
+            self.depth_image_color_pub.publish(depth_image_color_msg)
+        except CvBridgeError as e:
+            print(e)
+
 
 
     # pointcloud sur image RGB
@@ -136,82 +156,69 @@ class PointCloudProcessor(Node):
         cv2.imshow('RGB with Point Cloud Overlay', overlayed_image)
 
     
-    def project_points_to_image(self, points_3d):
-        # Extraire les champs x, y, z et les aplatir
+    def project_points_to_image(self, points_3d, rotation_matrix, translation_vector, camera_matrix):
+
+        # Convertir les données structurées en tableau NumPy standard
         x = points_3d['x'].flatten()
         y = points_3d['y'].flatten()
         z = points_3d['z'].flatten()
+        points_3d_np = np.column_stack((x, y, z))
 
-        # tableau 2D standard
-        points_3d = np.column_stack((x, y, z))
+        # Convertir le tableau NumPy en tableau CuPy
+        points_3d_cp = cp.asarray(points_3d_np)
 
         # Appliquer les extrinsèques
-        points_3d_transformed = np.dot(points_3d, self.rotation_matrix.T) + self.translation_vector
+        points_3d_transformed = cp.dot(points_3d_cp, rotation_matrix.T) + translation_vector
 
         # Ajouter une colonne de 1 pour les coordonnées homogènes
-        ones = np.ones((points_3d_transformed.shape[0], 1), dtype=np.float64)
-        points_3d_homogeneous = np.hstack([points_3d_transformed, ones])
+        ones = cp.ones((points_3d_transformed.shape[0], 1), dtype=cp.float64)
+        points_3d_homogeneous = cp.hstack([points_3d_transformed, ones])
 
         # Effectuer la multiplication matricielle
-        # Retirer la quatrième dimension (les ones cf ci-dessus) avant de multiplier
-        points_2d_homogeneous = np.dot(self.camera_matrix, points_3d_homogeneous[:, :3].T).T
+        points_2d_homogeneous = cp.dot(camera_matrix, points_3d_homogeneous[:, :3].T).T
 
         # Normaliser pour obtenir les coordonnées u, v
         points_2d = points_2d_homogeneous[:, :2] / points_2d_homogeneous[:, 2:]
 
-        return points_2d
+        return cp.asnumpy(points_2d)  # Convertir le résultat en tableau NumPy
     
-    def publish_depth_image_raw(self, depth_image):
-        try:
-            # Convertir l'image de profondeur raw en un message ROS
-            depth_image_raw_msg = self.bridge.cv2_to_imgmsg(depth_image, "32FC1")
-            self.depth_image_raw_pub.publish(depth_image_raw_msg)
-        except CvBridgeError as e:
-            print(e)
-
-
-    def publish_depth_image_color(self, depth_image):
-        try:
-            # Convertir l'image de profondeur RGB en un message ROS
-            depth_image_color_msg = self.bridge.cv2_to_imgmsg(depth_image, "bgr8")
-            self.depth_image_color_pub.publish(depth_image_color_msg)
-        except CvBridgeError as e:
-            print(e)
-
-
+    
     # depth image
     def create_depth_image(self, points_3d, points_2d):
-        depth_image = np.full(self.rgb_image.shape[:2], 10000, dtype=np.float32)
+        depth_image_cp = cp.full(self.rgb_image.shape[:2], 10000, dtype=cp.float32)
 
-        # Reformatage de points_3d pour correspondre à la forme de points_2d
+        # Convertir les données structurées en tableau NumPy standard
         x = points_3d['x'].flatten()
         y = points_3d['y'].flatten()
         z = points_3d['z'].flatten()
+        points_3d_np = np.column_stack((x, y, z))
 
-        points_3d_reshaped = np.column_stack((x, y, z))
-
-        # Assurer que les points sont dans les limites de l'image
-        valid_points = (0 <= points_2d[:, 0]) & (points_2d[:, 0] < self.rgb_image.shape[1]) & \
-                    (0 <= points_2d[:, 1]) & (points_2d[:, 1] < self.rgb_image.shape[0])
+        # Convertir en tableau CuPy
+        points_3d_cp = cp.asarray(points_3d_np)
+        points_2d_cp = cp.asarray(points_2d)
 
         # Coordonnées et valeurs de profondeur valides
-        valid_points_2d = points_2d[valid_points].astype(int)
-        valid_z = points_3d_reshaped[valid_points][:, 2]  # Extraire la composante z
+        valid_points = (0 <= points_2d_cp[:, 0]) & (points_2d_cp[:, 0] < self.rgb_image.shape[1]) & \
+                    (0 <= points_2d_cp[:, 1]) & (points_2d_cp[:, 1] < self.rgb_image.shape[0])
+        valid_points_2d = points_2d_cp[valid_points].astype(int)
+        valid_z = points_3d_cp[valid_points][:, 2]
 
         # Remplir l'image de profondeur
-        depth_image[valid_points_2d[:, 1], valid_points_2d[:, 0]] = valid_z
+        depth_image_cp[valid_points_2d[:, 1], valid_points_2d[:, 0]] = valid_z
 
-        return depth_image
+        return cp.asnumpy(depth_image_cp)  # Convertir en tableau NumPy pour le traitement ultérieur
+
+
     
 
     def display_depth_image(self, depth_image):
         # Exclure les valeurs sans données pour trouver la plage de normalisation
-        min_depth = np.min(depth_image[depth_image != 10000])
-        max_depth = np.max(depth_image[depth_image != 10000])
+        min_depth = cp.min(depth_image[depth_image != 10000])
+        max_depth = cp.max(depth_image[depth_image != 10000])
 
         # Inverser la normalisation pour que les objets proches soient rouges
-        depth_normalized = np.clip((max_depth - depth_image) / (max_depth - min_depth), 0, 1)
-        depth_normalized = (depth_normalized * 255).astype(np.uint8)
+        depth_normalized = cp.clip((max_depth - depth_image) / (max_depth - min_depth), 0, 1)
+        depth_normalized = (depth_normalized * 255).astype(cp.uint8)
 
         # Définir les pixels sans données sur noir (valeur 0)
         depth_normalized[depth_image == 10000] = 0
@@ -223,32 +230,6 @@ class PointCloudProcessor(Node):
 
         cv2.imshow('Depth Image', depth_colormap)
 
-
-    def get_depth_at_center(self, depth_image):
-        center_x = depth_image.shape[1] // 2
-        center_y = depth_image.shape[0] // 2
-        depth_at_center = depth_image[center_y, center_x]
-
-        if depth_at_center != 10000:
-            self.last_center_depth = depth_at_center
-
-        return self.last_center_depth
-
-    def get_average_depth_in_zone(self, depth_image, x_min, x_max, y_min, y_max):
-
-        # Extraire la zone spécifiée de l'image de profondeur
-        depth_zone = depth_image[y_min:y_max, x_min:x_max]
-
-        # Créer un masque pour exclure les valeurs de 10000 (absence de données)
-        valid_depth_mask = depth_zone != 10000
-
-        # Calculer la moyenne en excluant les valeurs de 10000
-        if np.any(valid_depth_mask):
-            self.last_zone_depth = np.mean(depth_zone[valid_depth_mask])
-        else:
-            self.last_zone_depth = self.last_zone_depth  # Aucune valeur valide dans la zone
-
-        return self.last_zone_depth
 
     def listener_pointcloud(self, msg):
 
@@ -263,7 +244,7 @@ class PointCloudProcessor(Node):
 
         if self.rgb_image is not None:
             # Projeter les points sur l'image RGB
-            points_2d = self.project_points_to_image(points)
+            points_2d = self.project_points_to_image(points, self.rotation_matrix, self.translation_vector, self.camera_matrix)
             #self.overlay_points_on_image(points_2d)
 
             depth_image = self.create_depth_image(points, points_2d)
