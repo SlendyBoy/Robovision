@@ -2,12 +2,17 @@ import numpy as np
 import cv2
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, PointCloud2, PointField
+from geometry_msgs.msg import TransformStamped
 import time
 from cv_bridge import CvBridge, CvBridgeError
 from ultralytics import YOLO
 import math
 import cupy as cp
+import tf2_ros
+
+import sensor_msgs_py.point_cloud2 as pc2
+import std_msgs.msg
 
 # Load the YOLOv8 model
 model_pose = YOLO('yolov8m-pose.pt')
@@ -20,9 +25,11 @@ class VisionObjPers(Node):
 
         self.last_time_obj = time.time()  # Initialiser last FPS
         self.bridge = CvBridge()
+        self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
 
-        self.zoom_factor = 1  # niveau de zoom de base (100%)
         self.depth_image = None
+
+        # keypoints
         self.NOSE =         0
         self.L_EYE =        1
         self.R_EYE =        2
@@ -41,6 +48,7 @@ class VisionObjPers(Node):
         self.L_ANKLE =      15
         self.R_ANKLE =      16
 
+        # couleurs du modèle pose
         self.pose_palette = np.array(
             [
                 (255, 128, 0),
@@ -67,6 +75,7 @@ class VisionObjPers(Node):
             dtype=np.uint8,
         )
 
+        # segments membres à dessiner
         self.skeleton = np.array([
             [16, 14],
             [14, 12],
@@ -91,13 +100,16 @@ class VisionObjPers(Node):
             dtype=np.uint8,
         )
 
+        # indices couleurs pour membres
         self.limb_color = np.array([9, 9, 9, 9, 7, 7, 7, 0, 0, 0, 0, 0, 16, 16, 16, 16, 16, 16, 16],
             dtype=np.uint8,
         )
+        # indices couleurs pour kpts
         self.kpt_color = np.array([16, 16, 16, 16, 16, 0, 0, 0, 0, 0, 0, 9, 9, 9, 9, 9, 9],
             dtype=np.uint8,
         )
 
+        # Intrinsèques
         self.depth_intrinsics = cp.array([
             [427.3677673339844, 0.0, 428.515625],
             [0.0, 427.3677673339844, 237.0117950439453],
@@ -115,6 +127,10 @@ class VisionObjPers(Node):
             [0.0, 639.782958984375, 359.14453125], 
             [0.0, 0.0, 1.0]
         ])
+        self.fx = self.camera_matrix[0][0]
+        self.fy = self.camera_matrix[1][1]
+        self.cx = self.camera_matrix[0][2]
+        self.cy = self.camera_matrix[2][2]
 
         # Extrinsèques (rotation et translation) de la caméra de profondeur vers la caméra RGB
         self.rotation_matrix = cp.array([
@@ -123,8 +139,6 @@ class VisionObjPers(Node):
             [-0.00038844801019877195, 0.004889659583568573, 0.9999879598617554]
         ])
         self.translation_vector = cp.array([-0.05912087857723236, 0.0001528092980151996, 6.889161159051582e-05])
-
-        #cv2.namedWindow("Detection objets et posture", cv2.WINDOW_AUTOSIZE | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_NORMAL)
         
         self.camera_rgb_sub = self.create_subscription(
             Image,
@@ -140,42 +154,40 @@ class VisionObjPers(Node):
             10
         )
 
+        self.pointcloud_pub = self.create_publisher(
+            PointCloud2, 
+            '/robovision/pointcloud', 
+            10)
+
+    def create_transform_msg(self, x_center, y_center, depth, frame_id, child_frame_id):
+        point = self.pixel_to_world(x_center, y_center, depth)
+        #point = self.apply_transformation(point)
+
+        # Create TransformStamped message
+        transform_msg = TransformStamped()
+        transform_msg.header.stamp = self.get_clock().now().to_msg()
+        transform_msg.header.frame_id = frame_id
+        transform_msg.child_frame_id = child_frame_id
+        transform_msg.transform.translation.x = float(point[0])
+        transform_msg.transform.translation.y = float(point[1])
+        transform_msg.transform.translation.z = round(float(point[2]), 2)
+        transform_msg.transform.rotation.x = 0.0
+        transform_msg.transform.rotation.y = 0.0
+        transform_msg.transform.rotation.z = 0.0
+        transform_msg.transform.rotation.w = 1.0  # pas de rotation
+
+        return transform_msg
+
     def cv2_txt(self, frame, txt, x, y, size):
         cv2.putText(frame, txt, (x, y), cv2.FONT_HERSHEY_SIMPLEX, size, (0, 255, 0), 2, cv2.LINE_AA)
 
-    def zoom_callback(self, event, x, y, flags, param):
-
-        # Zoom avant avec le clic gauche
-        if event == cv2.EVENT_LBUTTONDOWN:
-            self.zoom_factor = min(self.zoom_factor + 0.1, 3)
-
-        # Zoom arrière avec le clic droit
-        elif event == cv2.EVENT_RBUTTONDOWN:
-            self.zoom_factor = max(self.zoom_factor - 0.1, 1)
-
-    def apply_zoom(self, image):
-        original_size = (image.shape[1], image.shape[0])  # Largeur, Hauteur
-        zoomed_size = (int(original_size[0] * self.zoom_factor), int(original_size[1] * self.zoom_factor))
-
-        # Redimensionner l'image
-        zoomed_img = cv2.resize(image, zoomed_size, interpolation=cv2.INTER_LINEAR)
-
-        # Recadrer l'image si elle est agrandie
-        if self.zoom_factor > 1:
-            center_x, center_y = zoomed_size[0] // 2, zoomed_size[1] // 2
-            x_start = max(center_x - original_size[0] // 2, 0)
-            y_start = max(center_y - original_size[1] // 2, 0)
-            zoomed_img = zoomed_img[y_start:y_start + original_size[1], x_start:x_start + original_size[0]]
-
-        return zoomed_img
-        
 
     def project_points_to_image(self, points_3d, rotation_matrix, translation_vector, camera_matrix):
 
         # Convertir les données structurées en tableau NumPy standard
-        x = points_3d['x'].flatten()
-        y = points_3d['y'].flatten()
-        z = points_3d['z'].flatten()
+        x = points_3d[0].flatten()
+        y = points_3d[1].flatten()
+        z = points_3d[2].flatten()
         points_3d_np = np.column_stack((x, y, z))
 
         # Convertir le tableau NumPy en tableau CuPy
@@ -299,16 +311,76 @@ class VisionObjPers(Node):
             else:
                 object_depth = cp.nan  # Aucune valeur valide trouvée
 
-            boxes = result.boxes.cpu().numpy()
-            x_min, y_min, x_max, y_max = map(int, boxes.xyxy[0])
-
-            label = f"{round(float(object_depth), 2)} m" if not cp.isnan(object_depth) else "N/A m"
-            self.cv2_txt(frame, label, x_min, y_min - 28, 1)
+            return object_depth
         else:
             # Aucun masque disponible
             self.get_logger().info("Aucun masque trouvé pour calculer la profondeur.")
 
+    
 
+    def create_point_cloud_msg(self, points_3d, frame_id):
+        header = std_msgs.msg.Header()
+        header.stamp = self.get_clock().now().to_msg()
+        header.frame_id = frame_id
+
+        fields = [PointField(name='x', offset=0, datatype=PointField.FLOAT64, count=1),
+                PointField(name='y', offset=4, datatype=PointField.FLOAT64, count=1),
+                PointField(name='z', offset=8, datatype=PointField.FLOAT64, count=1)]
+
+        cloud_msg = pc2.create_cloud(header, fields, points_3d)
+        return cloud_msg
+
+
+    def pixel_to_world(self, x, y, depth):
+        X = (x - self.cx) * depth / self.fx
+        Y = (y - self.cy) * depth / self.fy
+        Z = depth
+        return [X, Y, Z]
+    
+
+    def project_pixels_to_3d(self, rgb_image, depth_image, camera_intrinsics, rotation_matrix, translation_vector):
+        # Créer une grille pour les coordonnées x, y des pixels
+        height, width = rgb_image.shape[:2]
+        x = cp.arange(width)
+        y = cp.arange(height)
+        x_grid, y_grid = cp.meshgrid(x, y)
+
+        # Obtenir les valeurs de profondeur pour chaque pixel
+        depth_values = cp.asarray(depth_image)
+
+        # Convertir les coordonnées des pixels en coordonnées du monde
+        X = (x_grid - camera_intrinsics[0, 2]) * depth_values / camera_intrinsics[0, 0]
+        Y = (y_grid - camera_intrinsics[1, 2]) * depth_values / camera_intrinsics[1, 1]
+        Z = depth_values
+
+        # Créer une matrice de points 3D
+        points_3d = cp.stack((X.flatten(), Y.flatten(), Z.flatten(), cp.ones_like(X.flatten())), axis=1)
+
+        # Appliquer la transformation extrinsèque (rotation et translation)
+        points_3d_world = cp.dot(rotation_matrix, points_3d.T[:3, :]) + translation_vector[:, cp.newaxis]
+
+        return points_3d_world.T
+
+    def apply_transformation(self, point_3d):
+        # Convertir le point 3D en tableau Cupy
+        point_3d_cp = cp.asarray(point_3d)
+
+        # Ajouter une dimension homogène
+        point_3d_homogeneous = cp.hstack([point_3d_cp, cp.array([1])])
+
+        # Créer la matrice de transformation complète
+        transformation_matrix = cp.vstack([
+            cp.hstack([self.rotation_matrix, self.translation_vector[:, cp.newaxis]]),
+            cp.array([0, 0, 0, 1])
+        ])
+
+        # Appliquer la transformation
+        point_transformed = cp.dot(transformation_matrix, point_3d_homogeneous)
+
+        # Ignorer la quatrième dimension
+        point_3d_transformed = point_transformed[:3]
+
+        return point_3d_transformed.get()
 
 
     def calculate_angle(self, p1, p2, p3):
@@ -324,7 +396,6 @@ class VisionObjPers(Node):
             angle = 360 - angle  # ajuster si l'angle est supérieur à 180 degrés
 
         return angle
-
 
     def draw_angle(self, frame, p1, p2, p3, angle):
         # S'assurer que les points sont des entiers
@@ -350,7 +421,6 @@ class VisionObjPers(Node):
 
         # Afficher le degré de l'angle
         cv2.putText(frame, str(int(angle)), (p2[0] + 10, p2[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
-
 
     
     def is_aligned_vertically(self, pt1, pt2, pt3, threshold=0.1):
@@ -387,8 +457,6 @@ class VisionObjPers(Node):
         """
         return abs(hip_angle - 90) < hip_threshold and abs(knee_angle - 90) < knee_threshold
 
-   
-
     def calculate_position(self, frame, kpts):
         # Utiliser les indices pour les épaules, hanches, genoux et chevilles
         L_shoulder = kpts[self.L_SHOULDER]
@@ -401,17 +469,17 @@ class VisionObjPers(Node):
         R_ankle = kpts[self.R_ANKLE]
 
         # Calculer les angles
-        L_side_angle = self.calculate_angle(L_shoulder, L_hip, L_ankle)
-        self.draw_angle(frame, L_shoulder, L_hip, L_ankle, L_side_angle)
+        L_hip_angle = self.calculate_angle(L_shoulder, L_hip, L_ankle)
+        #self.draw_angle(frame, L_shoulder, L_hip, L_ankle, L_hip_angle)
 
-        R_side_angle = self.calculate_angle(R_shoulder, R_hip, R_ankle)
-        self.draw_angle(frame, R_shoulder, R_hip, R_ankle, R_side_angle)
+        R_hip_angle = self.calculate_angle(R_shoulder, R_hip, R_ankle)
+        #self.draw_angle(frame, R_shoulder, R_hip, R_ankle, R_hip_angle)
 
         L_knee_angle = self.calculate_angle(L_hip, L_knee, L_ankle)
-        self.draw_angle(frame, L_hip, L_knee, L_ankle, L_knee_angle)
+        #self.draw_angle(frame, L_hip, L_knee, L_ankle, L_knee_angle)
 
         R_knee_angle = self.calculate_angle(R_hip, R_knee, R_ankle)
-        self.draw_angle(frame, R_hip, R_knee, R_ankle, R_knee_angle)
+        #self.draw_angle(frame, R_hip, R_knee, R_ankle, R_knee_angle)
         
 
         # Vérifier si la personne est debout
@@ -425,7 +493,7 @@ class VisionObjPers(Node):
                     not self.is_aligned_vertically(R_shoulder, R_hip, R_ankle)
 
         # Vérifier si la personne est couchée
-        is_lying_down = L_side_angle < 45 or R_side_angle < 45
+        is_lying_down = L_hip_angle < 45 or R_hip_angle < 45
 
         # Déterminer la position
         if is_standing:
@@ -437,7 +505,7 @@ class VisionObjPers(Node):
         else:
             position = "N/A pos"
 
-        return [position, int(L_side_angle), int(R_side_angle), int(L_knee_angle), int(R_knee_angle)]
+        return [position, int(L_hip_angle), int(R_hip_angle), int(L_knee_angle), int(R_knee_angle)]
 
 
     def listener_cam(self, msg):
@@ -456,46 +524,81 @@ class VisionObjPers(Node):
             # Appliquer la correction de distorsion sur l'image
             undistorted_frame = self.undistort_image(frame)
 
+            """# Supposons que points_3d_world est un array numpy avec vos points 3D
+            points_3d_world = self.project_pixels_to_3d(undistorted_frame, self.depth_image, self.camera_matrix, self.rotation_matrix, self.translation_vector)
+            frame_id = "robovision_frame" # Le frame_id de votre caméra
+            self.get_logger().info(f"points_3d_world {points_3d_world}")
+            self.get_logger().info(f"points_3d_world shape {points_3d_world.shape}")
+            self.get_logger().info(f"points_3d_world dtype {points_3d_world.dtype}")
+
+            # Créer le message PointCloud2
+            cloud_msg = self.create_point_cloud_msg(points_3d_world, frame_id)
+
+            # Publier le message
+            self.pointcloud_pub.publish(cloud_msg)"""
+
             # Detection et segmentation
-            results_seg = model_seg(undistorted_frame, conf=0.4, verbose=False, retina_masks=False)
+            results_seg = model_seg(undistorted_frame, conf=0.4, verbose=False, retina_masks=True)
 
-            seg_frame = results_seg[0].plot(boxes=True, masks=False)
-
+            seg_frame = results_seg[0].plot(boxes=True, masks=True)
+            i = 0
             for result in results_seg[0]:
-                self.calculate_and_display_object_depth(result, seg_frame)
+                
+                # calculer distance
+                object_depth = self.calculate_and_display_object_depth(result, seg_frame)
+
+                boxes = result.boxes.cpu().numpy()
+                x_min, y_min, x_max, y_max = map(int, boxes.xyxy[0])
+
+                label = f"{round(float(object_depth), 2)} m" if not cp.isnan(object_depth) else "N/A m"
+                self.cv2_txt(seg_frame, label, x_min, y_min - 28, 1)
+
+                # TF des bbox
+                # centre bounding box
+                x_center = (x_min + x_max) / 2
+                y_center = (y_min + y_max) / 2
+                transform_msg = self.create_transform_msg(x_center, y_center, object_depth, "robovision_frame", f"object_frame {str(i)}")
+                self.tf_broadcaster.sendTransform(transform_msg)
+
+                """cv2.circle(seg_frame, 
+                           (int(x_center), int(y_center)), 
+                           5, (0, 255, 0), -1, lineType=cv2.LINE_AA)"""    
+                i += 1
 
 
+            # =============== POSE ===============
             results_pose = model_pose(undistorted_frame, conf=0.5, verbose=False)
-            #pose_frame = results_pose[0].plot(boxes=False)
 
-            # Create a black frame
-            black_frame = np.zeros_like(undistorted_frame)
+            # créer black frame
+            pose_frame = np.zeros_like(undistorted_frame)
 
             for result in results_pose[0]:
                 
                 # Det position pers
                 kpts = result.keypoints.xy.cpu().numpy()
-                pos = self.calculate_position(black_frame, kpts[0])
+                pos = self.calculate_position(pose_frame, kpts[0])
                 
                 # Afficher pos
                 boxes = result.boxes.cpu().numpy()
                 x_min, y_min, x_max, y_max = map(int, boxes.xyxy[0])
                 
-                cv2.putText(black_frame, str(pos[0]), (x_min, y_min + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, lineType=cv2.LINE_AA)
-                """cv2.putText(black_frame, str(pos[1]), (x_min, y_min + 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
-                cv2.putText(black_frame, str(pos[2]), (x_min, y_min + 110), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
-                cv2.putText(black_frame, str(pos[3]), (x_min, y_min + 140), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
-                cv2.putText(black_frame, str(pos[4]), (x_min, y_min + 170), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)"""
+                cv2.putText(seg_frame, str(pos[0]), (x_min, y_min + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255,1), 2, lineType=cv2.LINE_AA)
+                """cv2.putText(pose_frame, str(pos[1]), (x_min, y_min + 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+                cv2.putText(pose_frame, str(pos[2]), (x_min, y_min + 110), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+                cv2.putText(pose_frame, str(pos[3]), (x_min, y_min + 140), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+                cv2.putText(pose_frame, str(pos[4]), (x_min, y_min + 170), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)"""
 
 
                 # keypoints
                 for i in range(kpts.shape[1]):
                     kpt = kpts[0][i]
-                    color_idx = self.kpt_color[i]  # Get the index for the color
-                    color = self.pose_palette[color_idx]  # Get the actual color
+                    color_idx = self.kpt_color[i]  # index couleur
+                    color = self.pose_palette[color_idx]  # couleur
 
-                    # Draw the keypoint
-                    cv2.circle(black_frame, (int(kpt[0]), int(kpt[1])), 3, color.tolist(), -1, lineType=cv2.LINE_AA)
+                    if int(kpt[0]) % pose_frame.shape[1] == 0 or int(kpt[1]) % pose_frame.shape[0] == 0 or int(kpt[0]) < 0 or int(kpt[1]) < 0:
+                        continue
+
+                    cv2.circle(pose_frame, (int(kpt[0]), int(kpt[1])), 3, color.tolist(), -1, lineType=cv2.LINE_AA)
 
                 # Limbs
                 for i, sk in enumerate(self.skeleton):
@@ -505,19 +608,32 @@ class VisionObjPers(Node):
                     color_idx = self.limb_color[i]
                     color = self.pose_palette[color_idx]
 
-                    if pos1[0] % black_frame.shape[1] == 0 or pos1[1] % black_frame.shape[0] == 0 or pos1[0] < 0 or pos1[1] < 0:
+                    if pos1[0] % pose_frame.shape[1] == 0 or pos1[1] % pose_frame.shape[0] == 0 or pos1[0] < 0 or pos1[1] < 0:
                         continue
-                    if pos2[0] % black_frame.shape[1] == 0 or pos2[1] % black_frame.shape[0] == 0 or pos2[0] < 0 or pos2[1] < 0:
+                    if pos2[0] % pose_frame.shape[1] == 0 or pos2[1] % pose_frame.shape[0] == 0 or pos2[0] < 0 or pos2[1] < 0:
                         continue
 
-                    cv2.line(black_frame, pos1, pos2, color.tolist(), 2, lineType=cv2.LINE_AA)
-
+                    cv2.line(pose_frame, pos1, pos2, color.tolist(), 2, lineType=cv2.LINE_AA)
 
             # Superposer pose_frame sur seg_frame
-            seg_frame_with_pose = cv2.addWeighted(seg_frame, 1, black_frame, 1, 0)
+            # Pas de transparence
+            # Si pose_frame non noir, afficher pose_frame, sinon seg_frame
+            """seg_frame_with_pose = cp.asnumpy(
+                                    cp.where(
+                                        cp.any(
+                                            cp.asarray(pose_frame)>0,axis=-1,keepdims=True
+                                        ), 
+                                        cp.asarray(pose_frame), 
+                                        cp.asarray(seg_frame)
+                                    )
+                                )"""
+
+            # Légère transparence sur le squelette            
+            seg_frame_with_pose = cv2.addWeighted(seg_frame, 1, pose_frame, 1, 0)
 
             # Afficher les FPS
             self.cv2_txt(seg_frame_with_pose, f'FPS: {round(fps, 2)}', 10, 30, 1)
+
 
             # Afficher l'image finale
             cv2.imshow("Detection objets, segmentation et posture", seg_frame_with_pose)
