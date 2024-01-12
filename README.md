@@ -69,6 +69,38 @@ b. [ ] test2
     2. [x] Sub-task 2
 
 
+![Alt text](image.png)
+![Alt text](image-1.png)
+![Alt text](image-2.png)
+![Alt text](image-3.png)
+![Alt text](image-4.png)
+![Alt text](image-5.png)
+![Alt text](image-6.png)
+
+
+```bash
++---------------------------------------------------------------------------------------+
+| NVIDIA-SMI 530.30.02              Driver Version: 530.30.02    CUDA Version: 12.1     |
+|-----------------------------------------+----------------------+----------------------+
+| GPU  Name                  Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf            Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                                         |                      |               MIG M. |
+|=========================================+======================+======================|
+|   0  NVIDIA GeForce RTX 2070 S...    On | 00000000:01:00.0 Off |                  N/A |
+| N/A   57C    P0               62W /  80W|   2120MiB /  8192MiB |     43%      Default |
+|                                         |                      |                  N/A |
++-----------------------------------------+----------------------+----------------------+
+                                                                                         
++---------------------------------------------------------------------------------------+
+| Processes:                                                                            |
+|  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
+|        ID   ID                                                             Usage      |
+|=======================================================================================|
+|    0   N/A  N/A      2598      G   /usr/lib/xorg/Xorg                            4MiB |
+|    0   N/A  N/A    134488      C   /usr/bin/python3                            388MiB |
+|    0   N/A  N/A    134490      C   /usr/bin/python3                           1724MiB |
++---------------------------------------------------------------------------------------+
+```
 3. Représentation des noeuds ROS2
 ```mermaid
 graph LR
@@ -94,11 +126,13 @@ graph LR
 6. Pré-requis
 - Environnement de dev  
   - Ubuntu 22.04  
+  - Nvidia RTX 2070 Super
   - ROS2 Humble  
   - Python 3.10  
   - numpy 1.26.2  
   - ultralytics 8.0.227  
   - opencv-python 4.8.0.74  
+  - CUDA 12.1  
 
 7. Installation
 
