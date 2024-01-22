@@ -1,0 +1,26 @@
+<robot name="mon_robot">
+
+  <!-- Définition d'un lien (par exemple, le corps du robot) -->
+  <link name="base_robovision_link">
+    <!-- Propriétés visuelles et de collision ici -->
+  </link>
+
+  <!-- Définition d'un autre lien pour la caméra -->
+  <link name="camera_robovision_link">
+    <!-- Propriétés visuelles et de collision ici -->
+    <visual>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+      <origin  xyz="0 0 0" rpy="0 0 0"/>
+    </visual>
+  </link>
+
+  <!-- Joint qui relie la caméra au corps du robot -->
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_robovision_link"/>
+    <child link="camera_robovision_link"/>
+    <origin xyz="0 0 0" rpy="-1.0472 0 -1.5708"/>
+  </joint>
+
+</robot>

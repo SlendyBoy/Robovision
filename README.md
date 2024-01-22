@@ -164,6 +164,12 @@ Voici l'image finale :
 ![Alt text](./images/image-5.png)
 <p align="center"><em>Visualisation détection objets, distance, pose et position personne</em></p>
 
+
+![Alt text](./images/image-8.png)
+
+
+![Alt text](./images/image-9.png)
+
 On récupère le centre des bounding boxes des objets/personnes (x,y en pixels) puis le pixel est projeté dans le référentiel du monde réel en mètre à l'aide des intrinsèques et extrinsèques de la caméra pour ensuite publier le TF correspondant (x,y,z; z étant la distance calculée précédemment) :  
 ![Alt text](./images/image-1.png)
 <p align="center"><em>Visualisation des TFs</em></p>
