@@ -2,82 +2,177 @@
 
 ## Sujet 3 - Brique vision
 
-Tanguy FROUIN 5IRC
+Auteur : Tanguy FROUIN 5IRC
 
-1. État de l'Art
+# État de l'Art
 
-Sources:  
+## "Awesome lists"
+- [Une liste d'articles et d'ensembles de données sur l'analyse des nuages de points (traitement)](https://github.com/Yochengliu/awesome-point-cloud-analysis)
+- [Une collection de projets publics impressionnants de détection d'objets YOLO](https://github.com/codingonion/awesome-yolo-object-detection)
+- [Articles, codes et ensembles de données sur l'apprentissage profond pour la détection d'objets en 3D](https://github.com/TianhaoFu/Awesome-3D-Object-Detection)
 
-- Point clouds  
-https://developer.nvidia.com/blog/detecting-objects-in-point-clouds-using-ros-2-and-tao-pointpillars/  
-https://www.stereolabs.com/docs/ros2/depth-sensing/  
-https://github.com/IntelRealSense/librealsense/tree/development/wrappers/python/examples  
-https://github.com/jamohile/stereoscopic-point-clouds  
-https://github.com/heremaps/pptk  
-https://github.com/strawlab/python-pcl  
-https://github.com/ros-perception/perception_pcl  
-https://index.ros.org/p/pcl_ros/#humble  
-https://academy.visualcomponents.com/lessons/import-point-cloud-with-python-api/  
-https://www.youtube.com/watch?v=HIRj5pH2t-Y  
-https://jeffzzq.medium.com/ros2-image-pipeline-tutorial-3b18903e7329  
-https://medium.com/@regis.loeb/playing-with-point-clouds-for-3d-object-detection-eff1d98e526a  
-https://medium.com/yodayoda/from-depth-map-to-point-cloud-7473721d3f  
-http://www.diva-portal.org/smash/get/diva2:1245296/FULLTEXT01.pdf  
-http://www.open3d.org/docs/release/tutorial/geometry/rgbd_image.html  
-http://www.open3d.org/docs/release/tutorial/geometry/pointcloud.html  
-https://towardsdatascience.com/how-to-use-pointnet-for-3d-computer-vision-in-an-industrial-context-3568ba37327e  
+## Point Clouds
+- [NVIDIA Developer Blog sur les nuages de points et ROS 2](https://developer.nvidia.com/blog/detecting-objects-in-point-clouds-using-ros-2-and-tao-pointpillars/)
+- [Stereolabs - Depth Sensing avec ROS2](https://www.stereolabs.com/docs/ros2/depth-sensing/)
+- [Exemples Python pour Intel RealSense](https://github.com/IntelRealSense/librealsense/tree/development/wrappers/python/examples)
+- [Traitement de nuages de points stéréoscopiques](https://github.com/jamohile/stereoscopic-point-clouds)
+- [PPTK - Python Point Processing Toolkit](https://github.com/heremaps/pptk)
+- [Python-PCL (Point Cloud Library)](https://github.com/strawlab/python-pcl)
+- [Perception PCL sur ROS](https://github.com/ros-perception/perception_pcl)
+- [PCL ROS sur ROS Humble](https://index.ros.org/p/pcl_ros/#humble)
+- [Importation de nuages de points avec Python API](https://academy.visualcomponents.com/lessons/import-point-cloud-with-python-api/)
+- [Vidéo YouTube sur la classification de nuages de points 3D - PointNet](https://www.youtube.com/watch?v=HIRj5pH2t-Y)
+- [Tutoriel sur la pipeline d'image ROS2](https://jeffzzq.medium.com/ros2-image-pipeline-tutorial-3b18903e7329)
+- [Traitement de nuages de points pour la détection d'objets 3D](https://medium.com/@regis.loeb/playing-with-point-clouds-for-3d-object-detection-eff1d98e526a)
+- [De la carte de profondeur au nuage de points](https://medium.com/yodayoda/from-depth-map-to-point-cloud-7473721d3f)
+- [Thèse sur la perception d'objets YOLO 3D](http://www.diva-portal.org/smash/get/diva2:1245296/FULLTEXT01.pdf)
+- [Open3D pour les images RGBD](http://www.open3d.org/docs/release/tutorial/geometry/rgbd_image.html)
+- [Open3D pour les nuages de points](http://www.open3d.org/docs/release/tutorial/geometry/pointcloud.html)
+- [Utilisation de PointNet pour la vision par ordinateur 3D](https://towardsdatascience.com/how-to-use-pointnet-for-3d-computer-vision-in-an-industrial-context-3568ba37327e)
 
-- Segmentation  
-https://docs.opencv.org/4.8.0/d1/d5c/tutorial_py_kmeans_opencv.html  
-https://thepythoncode.com/article/kmeans-for-image-segmentation-opencv-python  
-https://sites.google.com/view/aide-python/applications/traitements-et-analyses-dimages/k-means-sur-image-avec-opencv-pour-segmenter  
-https://www.kdnuggets.com/2019/08/introduction-image-segmentation-k-means-clustering.html  
-https://dev.to/andreygermanov/how-to-implement-instance-segmentation-using-yolov8-neural-network-3if9  
+## Segmentation
+- [Documentation OpenCV K-Means pour la segmentation d'images](https://docs.opencv.org/4.8.0/d1/d5c/tutorial_py_kmeans_opencv.html)
+- [Article K-Means pour la segmentation d'images avec OpenCV en Python](https://thepythoncode.com/article/kmeans-for-image-segmentation-opencv-python)
+- [Site Google K-Means sur image avec OpenCV](https://sites.google.com/view/aide-python/applications/traitements-et-analyses-dimages/k-means-sur-image-avec-opencv-pour-segmenter)
+- [Introduction à la segmentation d'images avec K-Means](https://www.kdnuggets.com/2019/08/introduction-image-segmentation-k-means-clustering.html)
+- [Implémentation de la segmentation d'instance avec YOLOv8](https://dev.to/andreygermanov/how-to-implement-instance-segmentation-using-yolov8-neural-network-3if9)
 
+## Mediapipe
+- [Solutions Mediapipe de Google](https://github.com/google/mediapipe/blob/master/docs/solutions/)
+- [Exemples Mediapipe de Google](https://github.com/googlesamples/mediapipe/tree/main/examples)
+- [Guide des solutions Mediapipe](https://developers.google.com/mediapipe/solutions/guide)
 
-- Mediapipe  
-https://github.com/google/mediapipe/blob/master/docs/solutions/  
-https://github.com/googlesamples/mediapipe/tree/main/examples  
-https://developers.google.com/mediapipe/solutions/guide  
+## OpenPose
+- [OpenPose par CMU Perceptual Computing Lab](https://github.com/CMU-Perceptual-Computing-Lab/openpose)
+- [Documentation OpenPose](https://cmu-perceptual-computing-lab.github.io/openpose/web/html/doc/md_doc_00_index.html)
+- [Estimation de pose avec TensorFlow](https://github.com/ZheC/tf-pose-estimation)
+- [Estimation de pose lightweight avec PyTorch](https://github.com/Daniil-Osokin/lightweight-human-pose-estimation.pytorch)
+- [OpenPose avec ROS par Firephinx](https://github.com/firephinx/openpose_ros)
+- [ROS OpenPose par Ravijo](https://github.com/ravijo/ros_openpose)
 
-- OpenPose  
-https://github.com/CMU-Perceptual-Computing-Lab/openpose  
-https://cmu-perceptual-computing-lab.github.io/openpose/web/html/doc/md_doc_00_index.html  
-https://github.com/ZheC/tf-pose-estimation  
-https://github.com/Daniil-Osokin/lightweight-human-pose-estimation.pytorch  
-https://github.com/firephinx/openpose_ros  
-https://github.com/ravijo/ros_openpose  
+## Ultralytics
+- [Issues Ultralytics sur GitHub](https://github.com/ultralytics/ultralytics/issues/2028)
+- [Documentation Ultralytics](https://docs.ultralytics.com/)
 
-- Ultralytics  
-https://github.com/ultralytics/ultralytics/issues/2028  
-https://docs.ultralytics.com/  
-  
-- Intel RealSense  
-https://github.com/IntelRealSense/librealsense  
-https://github.com/IntelRealSense/realsense-ros  
-https://dev.intelrealsense.com/docs/python2  
-https://www.intelrealsense.com/developers/  
+## Intel RealSense
+- [Librealsense par Intel](https://github.com/IntelRealSense/librealsense)
+- [RealSense ROS par Intel](https://github.com/IntelRealSense/realsense-ros)
+- [Documentation Python pour Intel RealSense](https://dev.intelrealsense.com/docs/python2)
+- [Ressources pour développeurs Intel RealSense](https://www.intelrealsense.com/developers/)
 
-- NumPy sur GPU (CuPy)  
-https://cupy.dev/  
-
-
-2. Liste des fonctionnalités
-a. [x] test
-b. [ ] test2
-    1. [ ] Sub-task 1
-    2. [x] Sub-task 2
+## Optimisation
+- [CuPy - NumPy-like API pour GPU](https://cupy.dev/)
 
 
-![Alt text](image.png)
-![Alt text](image-1.png)
-![Alt text](image-2.png)
-![Alt text](image-3.png)
-![Alt text](image-4.png)
-![Alt text](image-5.png)
-![Alt text](image-6.png)
+
+# Liste des fonctionnalités  
+
+- Noeud `pointcloud_proc` :  
+    - [x] Récupération du nuage de points 3D depuis la caméra
+    - [x] Projection des points 3D en 2D sur l'image RGB
+    - [x] Création d'une image de profondeur
+        - [x] Publication données brutes sur le topic `/robovision/depth/raw`
+        - [x] Publication visualisation sur le topic `/robovision/depth/color`
+- Noeud `vision_obj_pers` :  
+    - [x] Récupération de l'image RGB et de l'image de profondeur
+    - [x] Correction de la distortion de l'image RGB
+    - [x] Inférence du modèle de segmentation YOLOv8 :
+        - [x] Traitement pour chaque objet détecté
+            - [x] Affichage des bounding boxes et informations de l'objet
+            - [x] Calcul et affichage de la distance objet-caméra
+            - [x] Projection des pixels (centre bbox) dans le monde réel en mètres
+            - [x] Publication des TFs (x,y,z)
+    - [x] Inférence du modèle de pose de YOLOv8 :
+        - [x] Analyse des positions des personnes (assis, debout, couché)
+        - [x] Affichage du squelette et de la position dans la bounding box
+    - [x] Superposition des images "seg_frame" et "pose_frame"
 
 
+# Représentation des noeuds ROS2
+```mermaid
+graph TD
+    Camera3D[Caméra 3D] -->|/camera/camera/depth/color/points| pointcloud_proc[pointcloud_proc]
+    Camera3D -->|/camera/camera/color/image_raw| pointcloud_proc
+    pointcloud_proc -->|/robovision/depth/raw| vision_obj_pers[vision_obj_pers]
+    pointcloud_proc -->|/robovision/depth/color| rviz
+    Camera3D -->|/camera/camera/color/image_raw| vision_obj_pers
+    vision_obj_pers -->|TFs| rviz[rviz]
+```
+
+# Description de l'algo
+```mermaid
+sequenceDiagram
+participant Camera3D as Caméra 3D
+participant pointcloud_proc as pointcloud_proc
+participant vision_obj_pers as vision_obj_pers
+participant YOLOv8 as Modèle YOLOv8
+participant rviz as rviz
+Camera3D-->>pointcloud_proc: /camera/camera/depth/color/points
+Camera3D-->>pointcloud_proc: /camera/camera/color/image_raw
+pointcloud_proc->>pointcloud_proc: Projection points 3D à 2D
+pointcloud_proc->>pointcloud_proc: création et publication image de profondeur
+pointcloud_proc-->>vision_obj_pers: /robovision/depth/raw
+pointcloud_proc-->>rviz: /robovision/depth/color
+Camera3D-->>vision_obj_pers: /camera/camera/color/image_raw
+
+loop Pour chaque frame RGB
+
+vision_obj_pers->>vision_obj_pers: Correction distortion image RGB
+vision_obj_pers->>YOLOv8: Inférence segmentation
+YOLOv8->>vision_obj_pers: Objets détectés
+vision_obj_pers->>vision_obj_pers: Calcul profondeur obj
+vision_obj_pers->>vision_obj_pers: Projection pixels RGB à points 3D en mètres
+vision_obj_pers-->>rviz: Publication TF
+vision_obj_pers->>vision_obj_pers: Création seg_frame
+vision_obj_pers->>YOLOv8: Inférence Pose
+YOLOv8->>vision_obj_pers: Keypoints et membres
+vision_obj_pers->>vision_obj_pers: Calcul position
+vision_obj_pers->>vision_obj_pers: Création pose_frame
+vision_obj_pers->>vision_obj_pers: Superposition seg_frame et pose_frame
+
+end
+```
+
+
+La caméra envoie le nuage de points 3D :  
+![Alt text](./images/image.png)
+<p align="center"><em>Visualisation du pointcloud envoyé par la caméra</em></p>
+
+
+Projection des points 3D du nuage en 2D à l'aides des intrinsèques et extrinsèques de la caméra :  
+![Alt text](./images/image-4.png)
+<p align="center"><em>Visualisation des points 3D projetés en 2D sur l'image RGB</em></p>
+
+
+Après le calcul de projection, on crée l'image de profondeur qui sera publiée et utilisée pour les calculs de distance :  
+![Alt text](./images/image-2.png)
+<p align="center"><em>Visualisation de l'image de profondeur brut</em></p>
+
+
+Création de la même image mais en RGB, qui sera elle aussi publiée :  
+![Alt text](./images/image-3.png)
+<p align="center"><em>Visualisation de l'image de profondeur RGB</em></p>
+
+
+Le calcul de la profondeur est basé sur les pixels des masques de segmentation des objets. On fait ensuite la médiane de la profondeur des points 3D correspondant à ces pixels. Voici par exemple les masques affichés :  
+![Alt text](./images/image-6.png)
+<p align="center"><em>Visualisation détection et segmentation objets, distance, pose et position personne</em></p>
+
+
+Par soucis de performance, on n'affiche pas les masques de segmentation.  
+Voici l'image finale :  
+![Alt text](./images/image-5.png)
+<p align="center"><em>Visualisation détection objets, distance, pose et position personne</em></p>
+
+On récupère le centre des bounding boxes des objets/personnes (x,y en pixels) puis le pixel est projeté dans le référentiel du monde réel en mètre à l'aide des intrinsèques et extrinsèques de la caméra pour ensuite publier le TF correspondant (x,y,z; z étant la distance calculée précédemment) :  
+![Alt text](./images/image-1.png)
+<p align="center"><em>Visualisation des TFs</em></p>
+
+Pour voir les performances de l'algo :  
+```bash
+nvidia-smi
+```
+Environ 400MiB pour `pointcloud_proc` et 1700MiB pour `vision_obj_pers` :  
 ```bash
 +---------------------------------------------------------------------------------------+
 | NVIDIA-SMI 530.30.02              Driver Version: 530.30.02    CUDA Version: 12.1     |
@@ -101,30 +196,18 @@ b. [ ] test2
 |    0   N/A  N/A    134490      C   /usr/bin/python3                           1724MiB |
 +---------------------------------------------------------------------------------------+
 ```
-3. Représentation des noeuds ROS2
-```mermaid
-graph LR
-    realsense2_camera["Noeud: realsense2_camera"]
-    pointcloud_proc["Noeud: pointcloud_proc"]
-    vision_obj_pers["Noeud: vision_obj_pers"]
-    
-    realsense2_camera -- "/camera/camera/color/image_raw" --> vision_obj_pers
-    realsense2_camera -- "/camera/camera/depth/color/points" --> pointcloud_proc
-```
+<p align="center"><em>Performances</em></p>
 
-4. Description de l'algo
-
-
-5. Technologies et outils potentiels
+# Technologies et outils
 
     - ROS2 : Intégration et communication
     - Python : API et algorithmes
     - OpenCV : Traitement d'image et visualisation côté utilisateur
-    - YOLOv8 : Reconnaissance d'objets, personnes
+    - YOLOv8 : Reconnaissance et segmentation d'objets, personnes
     - Rviz : visualisation des topics côté ROS2  
   
-6. Pré-requis
-- Environnement de dev  
+# Pré-requis  
+Environnement de dev :  
   - Ubuntu 22.04  
   - Nvidia RTX 2070 Super
   - ROS2 Humble  
@@ -134,64 +217,63 @@ graph LR
   - opencv-python 4.8.0.74  
   - CUDA 12.1  
 
-7. Installation
+# Installation
 
-- Installer les librairies
+1) Installer les librairies
 ```bash
 pip install -r requirements.txt
 ```
 
-- Connaitre la version de CUDA  (plusieurs façons)
+2) Connaitre la version de CUDA  (plusieurs façons)
 ```bash
 nvcc --version
 cat /usr/local/cuda/version.json
 ls -l /usr/local | grep cuda # cuda supposément installé dans /usr/local/cuda
-
 ```
 
-- Installer la version de CuPy (NumPy sur GPU) selon la version de CUDA
+3) Installer la version de CuPy (NumPy sur GPU) selon la version de CUDA (ne pas remplacer x dans la version de CuPy)
 ```bash
-# For CUDA 10.2
+# Pour CUDA 10.2
 pip install cupy-cuda102
 
-# For CUDA 11.0
+# Pour CUDA 11.0
 pip install cupy-cuda110
 
-# For CUDA 11.1
+# Pour CUDA 11.1
 pip install cupy-cuda111
 
-# For CUDA 11.2 ~ 11.x
+# Pour CUDA 11.2 ~ 11.x
 pip install cupy-cuda11x
 
-# For CUDA 12.x
+# Pour CUDA 12.x
 pip install cupy-cuda12x
 
-# For AMD ROCm 4.3
+# Pour AMD ROCm 4.3
 pip install cupy-rocm-4-3
 
-# For AMD ROCm 5.0
+# Pour AMD ROCm 5.0
 pip install cupy-rocm-5-0
 ```
 
-- Installer le SDK d'Intel® RealSense™
+4) Installer le SDK d'Intel® RealSense™
 ```bash
 sudo apt install ros-humble-librealsense2*
 ```
 
-- Création du workspace ROS2 Humble
+5) Création du workspace ROS2 Humble
 ```bash
 mkdir -p ~/ros2_humble_ws/src
 cd ~/ros2_humble_ws/src/
 ```
 
-- Installer le wrapper Intel® RealSense™ ROS2
+6) Installer le wrapper Intel® RealSense™ ROS2
 Clone dans `src`:
 ```bash
 git clone https://github.com/IntelRealSense/realsense-ros.git -b ros2-development
 cd ~/ros2_humble_ws
 ```
 
-- Installer les dépendences
+7) Installer les dépendences
 ```bash
 sudo apt-get install python3-rosdep -y
 sudo rosdep init
@@ -209,7 +291,7 @@ colcon build
 source install/setup.bash
 ```
 
-- Si le build ne passe pas (selon mon historique de commandes):
+7) (bis) Si le build ne passe pas (selon mon historique de commandes):
 
 ```bash
 source install/setup.bash
@@ -227,24 +309,24 @@ source /opt/ros/humble/setup.bash
 source install/setup.bash
 ```
 
-- Placer le package `ROS2/robovision_ros` dans `ros2_humble_ws/src/`
+8) Placer le package `ROS2/robovision_ros` dans `ros2_humble_ws/src/`
 Build et source
 ```bash
 colcon build
 source install/setup.bash
 ```
 
-- Lancer le noeud de la camera dans un terminal
+9) Lancer le noeud de la camera dans un terminal
 ```bash
 ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=true align_depth.enable:=true pointcloud.ordered_pc:=true
 ```
 
-- Lancer les noeuds du package dans un autre terminal
+10) Lancer les noeuds du package dans un autre terminal
 ```bash
 ros2 launch robovision_ros launch.py
 ```
 
-- Lancer Rviz dans un autre terminal
+11) Lancer Rviz dans un autre terminal
 ```bash
 rviz2
 ```
