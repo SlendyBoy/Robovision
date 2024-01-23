@@ -2,17 +2,15 @@ import numpy as np
 import cv2
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import Image, PointCloud2, PointField
-from geometry_msgs.msg import TransformStamped, Quaternion
+from sensor_msgs.msg import Image
+from geometry_msgs.msg import TransformStamped
 import time
 from cv_bridge import CvBridge, CvBridgeError
 from ultralytics import YOLO
 import math
 import cupy as cp
 import tf2_ros
-import tf2_py as tf2
 
-import sensor_msgs_py.point_cloud2 as pc2
 import std_msgs.msg
 from transforms3d.euler import euler2quat
 
@@ -156,20 +154,16 @@ class VisionObjPers(Node):
             10
         )
 
-        self.pointcloud_pub = self.create_publisher(
-            PointCloud2, 
-            '/robovision/pointcloud', 
-            10)
-
     def create_transform_msg(self, x_center, y_center, depth, frame_id, child_frame_id):
         point = self.pixel_to_world(x_center, y_center, depth)
         #point = self.apply_transformation(point)
 
-        # Angle de rotation en radians
-        angle_rad = math.radians(0)
+        angle_deg_z_cam = 90
 
-        # Créer un quaternion
-        q = euler2quat(0, 0, angle_rad) # return w, x, y, z
+        if float(point[0]) > 0:
+            angle_deg_z_cam = 95
+
+        self.updateTF("camera_robovision_link", "camera_link", angle_deg_z_cam)
 
         # Create TransformStamped message
         transform_msg = TransformStamped()
@@ -180,18 +174,40 @@ class VisionObjPers(Node):
         transform_msg.transform.translation.y = float(point[1])
         transform_msg.transform.translation.z = round(float(point[2])-0.5, 2)
 
+        transform_msg.transform.rotation.x = 0.0
+        transform_msg.transform.rotation.y = 0.0
+        transform_msg.transform.rotation.z = 0.0
+        transform_msg.transform.rotation.w = 1.0
+
+        return transform_msg
+    
+    def updateTF(self, frame_id, child_frame_id, angle_deg_z_cam):
+        angle_rad_z = math.radians(angle_deg_z_cam)
+        angle_rad_y = math.radians(-58)
+
+        q = euler2quat(0, angle_rad_y, angle_rad_z) # return w, x, y, z
+
+        # Create TransformStamped message
+        transform_msg = TransformStamped()
+        transform_msg.header.stamp = self.get_clock().now().to_msg()
+        transform_msg.header.frame_id = frame_id
+        transform_msg.child_frame_id = child_frame_id
+        transform_msg.transform.translation.x = 0.0
+        transform_msg.transform.translation.y = 0.0
+        transform_msg.transform.translation.z = 0.0
+
         transform_msg.transform.rotation.x = q[1]
         transform_msg.transform.rotation.y = q[2]
         transform_msg.transform.rotation.z = q[3]
         transform_msg.transform.rotation.w = q[0]
+        self.tf_broadcaster.sendTransform(transform_msg)
 
-        return transform_msg
 
     def cv2_txt(self, frame, txt, x, y, size):
         cv2.putText(frame, txt, (x, y), cv2.FONT_HERSHEY_SIMPLEX, size, (0, 255, 0), 2, cv2.LINE_AA)
 
 
-    def project_points_to_image(self, points_3d, rotation_matrix, translation_vector, camera_matrix):
+    """def project_points_to_image(self, points_3d, rotation_matrix, translation_vector, camera_matrix):
 
         # Convertir les données structurées en tableau NumPy standard
         x = points_3d[0].flatten()
@@ -274,7 +290,7 @@ class VisionObjPers(Node):
                 
         else:
             self.get_logger().info("Erreur dans la projection des points 3D en 2D")
-
+"""
 
     def depth_image_raw_callback(self, msg):
 
@@ -288,16 +304,7 @@ class VisionObjPers(Node):
     def undistort_image(self, image):
         return cv2.undistort(image, cp.asnumpy(self.camera_matrix), cp.asnumpy(self.dist_coeffs))
     
-
-    def calculate_object_depth(self, depth_roi, object_mask):
-        object_depth = depth_roi[object_mask]
-        valid_depths = object_depth[object_depth != 10000]  # Exclure les valeurs sans données
-        if valid_depths.size > 0:
-            return cp.mean(valid_depths)
-        else:
-            return None
         
-    
     def calculate_and_display_object_depth(self, result):
         masks = result.masks.data.cpu().numpy()  # Masques (N, H, W)
         
@@ -325,94 +332,12 @@ class VisionObjPers(Node):
             # Aucun masque disponible
             self.get_logger().info("Aucun masque trouvé pour calculer la profondeur.")
 
-    
-
-    def create_point_cloud_msg(self, points_3d, colors, frame_id):
-        header = std_msgs.msg.Header()
-        header.stamp = self.get_clock().now().to_msg()
-        header.frame_id = frame_id
-
-        fields = [
-            PointField(name='x', offset=0, datatype=PointField.FLOAT64, count=1),
-            PointField(name='y', offset=8, datatype=PointField.FLOAT64, count=1),
-            PointField(name='z', offset=16, datatype=PointField.FLOAT64, count=1),
-            PointField(name='rgb', offset=24, datatype=PointField.FLOAT64, count=1)
-        ]
-
-        # Fusionner les coordonnées 3D et les couleurs
-        points = cp.hstack([points_3d, colors])
-        
-        points_np = cp.asnumpy(points)
-
-        self.get_logger().info(f"points np avant msg {points_np}")
-        self.get_logger().info(f"points np shape {points_np.shape}")
-
-        cloud_msg = pc2.create_cloud(header, fields, points_np)
-        return cloud_msg
-    
-    def prepare_color_data(self, rgb_image):
-        # format RGB
-        rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
-
-        # Aplatir l'image
-        colors = rgb_image.reshape(-1, 3)
-
-        # Convertir les couleurs en uint32
-        colors = cp.asarray(colors, dtype=cp.uint8)
-        r = colors[:, 0].astype(cp.uint32)
-        g = colors[:, 1].astype(cp.uint32)
-        b = colors[:, 2].astype(cp.uint32)
-
-        # Combiner les canaux de couleur en un seul entier uint32 par pixel
-        rgb = (r << 16) | (g << 8) | b
-
-        return rgb
-
 
     def pixel_to_world(self, x, y, depth):
         X = (x - self.cx) * depth / self.fx
         Y = (y - self.cy) * depth / self.fy
         Z = depth
         return [X, Y, Z]
-    
-
-    def project_pixels_to_3d(self, rgb_image, depth_image, rotation_matrix, translation_vector):
-        # Créer une grille pour les coordonnées x, y des pixels
-        height, width = rgb_image.shape[:2]
-        x = cp.arange(width)
-        y = cp.arange(height)
-        x_grid, y_grid = cp.meshgrid(x, y)
-
-        # Obtenir les valeurs de profondeur pour chaque pixel
-        depth_values = cp.asarray(depth_image)
-        depth_values[depth_values == 10000] = 0.0
-
-        # Convertir les coordonnées des pixels en coordonnées du monde
-        X = (x_grid - self.cx) * depth_values / self.fx
-        Y = (y_grid - self.cy) * depth_values / self.fy
-        Z = depth_values
-
-        self.get_logger().info(f"X values {X}")
-        self.get_logger().info(f"X shape {X.shape}")
-        self.get_logger().info(f"Y values {Y}")
-        self.get_logger().info(f"Y shape {Y.shape}")
-        self.get_logger().info(f"Z values {Z}")
-        self.get_logger().info(f"Z shape {Z.shape}")
-
-        # Créer une matrice de points 3D
-        points_3d = cp.stack((X.flatten(), Y.flatten(), Z.flatten(), cp.ones_like(X.flatten())), axis=1)
-
-        # Appliquer la transformation extrinsèque (rotation et translation)
-        points_3d_world = cp.dot(rotation_matrix, points_3d.T[:3, :]) + translation_vector[:, cp.newaxis]
-        self.get_logger().info(f"Points 3D avant division: {points_3d_world[:5]}")  # Afficher les 5 premiers points
-
-        # Diviser les coordonnées 3D par 10000
-        points_3d_world /= 10000
-
-        self.get_logger().info(f"Points 3D après division: {points_3d_world[:5]}")
-
-
-        return points_3d_world.T
 
     def apply_transformation(self, point_3d):
         # Convertir le point 3D en tableau Cupy
@@ -577,26 +502,6 @@ class VisionObjPers(Node):
             # Appliquer la correction de distorsion sur l'image
             undistorted_frame = self.undistort_image(frame)
 
-            
-            """# Préparer les données de couleur
-            colors = self.prepare_color_data(undistorted_frame)
-            colors = colors.reshape(-1, 1)  # Reshape pour correspondre à (n, 1)
-
-            # Calculer les coordonnées 3D
-            points_3d_world = self.project_pixels_to_3d(undistorted_frame, self.depth_image, self.rotation_matrix, self.translation_vector)
-
-            self.get_logger().info(f"points_3d_world {points_3d_world}")
-            self.get_logger().info(f"points_3d_world shape {points_3d_world.shape}")
-            self.get_logger().info(f"points_3d_world dtype {points_3d_world.dtype}")
-            self.get_logger().info(f"colors shape: {colors.shape}")
-
-            # Créer le message de nuage de points avec les données de couleur
-            frame_id = "camera_robovision_link"
-            cloud_msg = self.create_point_cloud_msg(points_3d_world, colors, frame_id)
-
-            # Publication du message de nuage de points
-            self.pointcloud_pub.publish(cloud_msg)"""
-
             # Detection et segmentation
             results_seg = model_seg(undistorted_frame, conf=0.4, verbose=False, retina_masks=False)
 
@@ -622,7 +527,8 @@ class VisionObjPers(Node):
 
                 """cv2.circle(seg_frame, 
                            (int(x_center), int(y_center)), 
-                           5, (0, 255, 0), -1, lineType=cv2.LINE_AA)"""    
+                           5, (0, 255, 0), -1, lineType=cv2.LINE_AA)"""
+               
                 i += 1
 
 

@@ -35,5 +35,11 @@ def generate_launch_description():
             namespace='robovision_ros',
             executable='vision_obj_pers',
             name='vision_obj_pers'
+        ),
+        Node(
+            package='robovision_ros',
+            namespace='robovision_ros',
+            executable='face_reco_analysis',
+            name='face_reco_analysis'
         )
     ])

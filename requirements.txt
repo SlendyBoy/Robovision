@@ -1,3 +1,6 @@
 numpy==1.26.2
 ultralytics==8.0.227
 opencv-python==4.8.0.74
+transforms3d
+deepface
+face_recognition

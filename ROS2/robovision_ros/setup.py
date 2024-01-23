@@ -25,7 +25,8 @@ setup(
     entry_points={
         'console_scripts': [
             'pointcloud_proc = robovision_ros.pointcloud_proc:main',
-            'vision_obj_pers = robovision_ros.vision_obj_pers:main'
+            'vision_obj_pers = robovision_ros.vision_obj_pers:main',
+            'face_reco_analysis = robovision_ros.face_reco_analysis:main'
         ],
     },
 )

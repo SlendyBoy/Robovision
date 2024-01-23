@@ -13,16 +13,9 @@ class PointCloudProcessor(Node):
 
         super().__init__('pointcloud_proc') #noeud
 
-
         self.last_time_pc = time.time()  # Initialiser last FPS
         self.bridge = CvBridge()
         self.rgb_image = None
-
-        self.zoom_factor = 1  # niveau de zoom de base (100%)
-        self.max_point_size = 2 # Attribut taille points PC
-        self.use_fixed_limits = True  # Commencer avec le mode 'avec limites'
-        self.last_center_depth = 10000 # profondeur centre
-        self.last_zone_depth = 10000 # profondeur zone
 
         self.depth_intrinsics = cp.array([
             [427.3677673339844, 0.0, 428.515625],
@@ -50,10 +43,6 @@ class PointCloudProcessor(Node):
         ])
         self.translation_vector = cp.array([-0.05912087857723236, 0.0001528092980151996, 6.889161159051582e-05])
 
-        #cv2.namedWindow("Pointcloud RGB", cv2.WINDOW_AUTOSIZE | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_NORMAL)
-        #cv2.setMouseCallback("Pointcloud RGB", self.zoom_callback)
-        
-
         # subs PC
         self.subscription_pt_cloud = self.create_subscription(
             PointCloud2,
@@ -80,33 +69,6 @@ class PointCloudProcessor(Node):
 
     def cv2_txt(self, frame, txt, x, y, size):
         cv2.putText(frame, txt, (x, y), cv2.FONT_HERSHEY_SIMPLEX, size, (0, 255, 0), 1, cv2.LINE_AA)
-
-    def zoom_callback(self, event, x, y, flags, param):
-
-        # Zoom avant avec le clic gauche
-        if event == cv2.EVENT_LBUTTONDOWN:
-            self.zoom_factor = min(self.zoom_factor + 0.1, 3)
-
-        # Zoom arrière avec le clic droit
-        elif event == cv2.EVENT_RBUTTONDOWN:
-            self.zoom_factor = max(self.zoom_factor - 0.1, 1)
-
-    def apply_zoom(self, image):
-        original_size = (image.shape[1], image.shape[0])  # Largeur, Hauteur
-        zoomed_size = (int(original_size[0] * self.zoom_factor), int(original_size[1] * self.zoom_factor))
-
-        # Redimensionner l'image
-        zoomed_img = cv2.resize(image, zoomed_size, interpolation=cv2.INTER_LINEAR)
-
-        # Recadrer l'image si elle est agrandie
-        if self.zoom_factor > 1:
-            center_x, center_y = zoomed_size[0] // 2, zoomed_size[1] // 2
-            x_start = max(center_x - original_size[0] // 2, 0)
-            y_start = max(center_y - original_size[1] // 2, 0)
-            zoomed_img = zoomed_img[y_start:y_start + original_size[1], x_start:x_start + original_size[0]]
-
-        return zoomed_img
-        
 
     def listener_rgb_image(self, msg):
         self.rgb_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
@@ -208,9 +170,6 @@ class PointCloudProcessor(Node):
 
         return cp.asnumpy(depth_image_cp)  # Convertir en tableau NumPy pour le traitement ultérieur
 
-
-    
-
     def display_depth_image(self, depth_image):
         # Exclure les valeurs sans données pour trouver la plage de normalisation
         min_depth = cp.min(depth_image[depth_image != 10000])
@@ -251,124 +210,8 @@ class PointCloudProcessor(Node):
             self.publish_depth_image_raw(depth_image) # Publier l'image de profondeur raw
             self.display_depth_image(depth_image)
 
-        """# pointcloud
-        pointcloud = self.create_pointcloud(points)
-
-        # Application de la carte de couleurs
-        colored_pointcloud = self.apply_colormap_to_pointcloud(pointcloud)
- 
-        # Appliquer le zoom
-        zoom_color_depth = self.apply_zoom(colored_pointcloud)
-
-        # Afficher les FPS
-        self.cv2_txt(zoom_color_depth, f'FPS: {round(fps, 2)}', 10, 30, 1)
-        self.cv2_txt(zoom_color_depth, f'Pts: {points["x"].size}', 220, 30, 0.4)
-        self.cv2_txt(zoom_color_depth, f'Zoom: {round(self.zoom_factor * 100)}%', 10, 60, 0.4)
-        self.cv2_txt(zoom_color_depth, f'Pt size: {self.max_point_size}', 110, 60, 0.4)
-        self.cv2_txt(zoom_color_depth, f"Mode: {'limit' if self.use_fixed_limits else 'no limit'}", 220, 60, 0.4)
-
-        cv2.imshow('Pointcloud RGB', zoom_color_depth)"""
-
         # Gérer les entrées clavier
         key = cv2.waitKey(1) & 0xFF
-        if key == ord('z'):
-            self.max_point_size = min(self.max_point_size + 1, 10)  # Augmenter max_point_size
-        elif key == ord('s'):
-            self.max_point_size = max(self.max_point_size - 1, 1)  # Diminuer max_point_size
-        elif key == ord('m'):
-            self.use_fixed_limits = not self.use_fixed_limits # modif mode limite
-        
-
-    def create_pointcloud(self, pcd):
-
-        x_values = np.array(pcd['x'], dtype=np.float32)
-        y_values = np.array(pcd['y'], dtype=np.float32)
-        z_values = np.array(pcd['z'], dtype=np.float32)
-
-        if self.use_fixed_limits:
-
-            # AVEC LIMITE
-            x_min, x_max = -5, 5
-            y_min, y_max = -5, 5  
-            z_min, z_max = -10, 10  
-
-            # Normalisation des axes X et Y
-            x_values_normalized = ((x_values - x_min) / (x_max - x_min))
-            y_values_normalized = ((y_values - y_min) / (y_max - y_min))
-
-            # Normalisation inversée pour Z
-            z_normalized = (z_max - z_values) / (z_max - z_min) * 255
-
-            # Clip
-            x_values_normalized = np.clip(x_values_normalized, 0, 1)
-            y_values_normalized = np.clip(y_values_normalized, 0, 1)
-            z_normalized = np.clip(z_normalized, 0, 255)
-
-            # Convertir en indices d'image et créer l'image de profondeur
-            img_width, img_height = 1280, 720
-            x_indices = np.round(x_values_normalized * (img_width - 1)).astype(int)
-            y_indices = np.round(y_values_normalized * (img_height - 1)).astype(int)
-            z_normalized = z_normalized.astype(np.uint8)
-
-            # Init de la carte vide et remplissage
-            pc_image = np.zeros((img_height, img_width), dtype=np.uint8)
-
-        else:
-            # SANS LIMITES
-
-            # Normaliser les valeurs x et y
-            x_values_normalized = (x_values - x_values.min()) / (x_values.max() - x_values.min())
-            y_values_normalized = (y_values - y_values.min()) / (y_values.max() - y_values.min())
-
-            # Convertir en indices d'image
-            img_width, img_height = 1280, 720
-            x_indices = np.round(x_values_normalized * (img_width - 1)).astype(int)
-            y_indices = np.round(y_values_normalized * (img_height - 1)).astype(int)
-
-            # Normaliser les valeurs de profondeur
-            z_normalized = 1 - (z_values - z_values.min()) / (z_values.max() - z_values.min()) * 255
-            z_normalized = z_normalized.astype(np.uint8)
-
-            # Créer une image de profondeur vide
-            pc_image = np.zeros((img_height, img_width), dtype=np.uint8)
-
-
-        # Calculer la taille des points en fonction de leur profondeur normalisée
-        # Les points plus proches (z_normalized petit) auront une taille plus grande
-        point_sizes = np.round((1 - z_normalized / 255) * self.max_point_size)
-
-        # Appliquer le kernel à chaque point
-        # Itérer sur chaque taille unique présente dans point_sizes
-        for size in np.unique(point_sizes):
-
-            # Kernel carré de la taille du point, utilisé pour dilater les points
-            kernel = np.ones((int(size), int(size)), np.uint8)
-
-            # Image temporaire
-            points_to_dilate = np.zeros_like(pc_image)
-
-            # Assigner les valeurs normalisées de Z aux points qui correspondent à la taille de kernel actuelle
-            points_to_dilate[y_indices[point_sizes == size], x_indices[point_sizes == size]] = z_normalized[point_sizes == size]
-
-            # Agrandir les points en utilisant le kernel
-            dilated_points = cv2.dilate(points_to_dilate, kernel, iterations=1)
-
-            # MAJ l'image de profondeur originale avec les points dilatés
-            # 'np.maximum' garantit que la valeur la plus élevée entre l'image de profondeur actuelle et les points dilatés est conservée
-            pc_image = np.maximum(pc_image, dilated_points)
-        
-        return pc_image
-        
-
-    def apply_colormap_to_pointcloud(self, pointcloud):
-        # Normaliser la depth map (0-255)
-        normalized_depth = cv2.normalize(pointcloud, None, 0, 255, cv2.NORM_MINMAX)
-        normalized_depth = np.uint8(normalized_depth)
-
-        # Appliquer la carte de couleurs
-        colored_pointcloud = cv2.applyColorMap(normalized_depth, cv2.COLORMAP_JET)
-
-        return colored_pointcloud
 
 def main(args=None):
     rclpy.init(args=args)

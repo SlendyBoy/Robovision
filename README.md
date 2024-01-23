@@ -204,6 +204,53 @@ Environ 400MiB pour `pointcloud_proc` et 1700MiB pour `vision_obj_pers` :
 ```
 <p align="center"><em>Performances</em></p>
 
+Transformation 2D en 3D
+
+Matrice intrinsèque caméra RGB :  
+
+$ 
+\begin{bmatrix} 
+fx & 0  & cx \\
+0  & fy & cy \\
+0  & 0  & 1
+\end{bmatrix}
+$
+
+Dans cette matrice :
+
+- fx : longueur focale horizontale (px)
+- fy : longueur focale verticale (px)
+- cx : coordonnée horizontale du point principal (centre optique) (px)
+- cy : coordonnée verticale du point principal (centre optique) (px)
+
+Cette matrice est utilisée pour effectuer la transformation des coordonnées 3D du monde réel en coordonnées 2D sur le plan de l'image de la caméra.
+
+Point 2D $[x,y]$ en point 3D $[X, Y, Z]$ :  
+
+$X = (x - c_x) * d / fx$
+$Y = (y - c_y) * d / fy$
+$Z = d$
+
+Appliquer les transformations extrinsèques aux points 3D calculés :  
+
+Matrice de Rotation et Vecteur de Translation : représentent la transformation entre les systèmes de coordonnées de la caméra de profondeur et de la caméra RGB.  
+
+Transformation des Points 3D : Chaque point 3D calculé doit être transformé en utilisant R et T. Pour un point 3D $[X,Y,Z]$, la transformation se fait comme suit :  
+
+$ 
+\begin{bmatrix} 
+X' \\ Y' \\ Z'
+\end{bmatrix}
+= R \times
+\begin{bmatrix} 
+X \\ Y \\ Z
+\end{bmatrix}
++
+T
+$
+
+Où X′, Y′, et Z′ sont les coordonnées transformées dans le système de coordonnées du monde réel.
+
 # Technologies et outils
 
     - ROS2 : Intégration et communication
