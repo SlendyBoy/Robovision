@@ -86,6 +86,9 @@ Auteur : Tanguy FROUIN 5IRC
         - [x] Analyse des positions des personnes (assis, debout, couché)
         - [x] Affichage du squelette et de la position dans la bounding box
     - [x] Superposition des images "seg_frame" et "pose_frame"
+- Noeud `face_reco_analysis` : 
+    - [x] Détection des visages
+    - [x] Détection des attributs (age, genre, émotion, ethnie)
 
 
 # Représentation des noeuds ROS2
@@ -93,6 +96,7 @@ Auteur : Tanguy FROUIN 5IRC
 graph TD
     Camera3D[Caméra 3D] -->|/camera/camera/depth/color/points| pointcloud_proc[pointcloud_proc]
     Camera3D -->|/camera/camera/color/image_raw| pointcloud_proc
+    Camera3D -->|/camera/camera/color/image_raw| face_reco_analysis[face_reco_analysis]
     pointcloud_proc -->|/robovision/depth/raw| vision_obj_pers[vision_obj_pers]
     pointcloud_proc -->|/robovision/depth/color| rviz
     Camera3D -->|/camera/camera/color/image_raw| vision_obj_pers
@@ -106,7 +110,11 @@ participant Camera3D as Caméra 3D
 participant pointcloud_proc as pointcloud_proc
 participant vision_obj_pers as vision_obj_pers
 participant YOLOv8 as Modèle YOLOv8
+participant face_reco_analysis as face_reco_analysis
+participant dlib as Modèle dlib
+participant deepface as Modèles DeepFace
 participant rviz as rviz
+
 Camera3D-->>pointcloud_proc: /camera/camera/depth/color/points
 Camera3D-->>pointcloud_proc: /camera/camera/color/image_raw
 pointcloud_proc->>pointcloud_proc: Projection points 3D à 2D
@@ -114,6 +122,7 @@ pointcloud_proc->>pointcloud_proc: création et publication image de profondeur
 pointcloud_proc-->>vision_obj_pers: /robovision/depth/raw
 pointcloud_proc-->>rviz: /robovision/depth/color
 Camera3D-->>vision_obj_pers: /camera/camera/color/image_raw
+Camera3D-->>face_reco_analysis: /camera/camera/color/image_raw
 
 loop Pour chaque frame RGB
 
@@ -130,6 +139,13 @@ vision_obj_pers->>vision_obj_pers: Calcul position
 vision_obj_pers->>vision_obj_pers: Création pose_frame
 vision_obj_pers->>vision_obj_pers: Superposition seg_frame et pose_frame
 
+face_reco_analysis->>dlib: Inférence détection visages
+dlib->>face_reco_analysis: Emplacements visages
+end
+
+loop Toutes les 100 frames RGB
+face_reco_analysis->>deepface: Emplacements visages
+deepface->>face_reco_analysis: attributs
 end
 ```
 
@@ -172,23 +188,35 @@ Voici l'image finale :
 
 On récupère le centre des bounding boxes des objets/personnes (x,y en pixels) puis le pixel est projeté dans le référentiel du monde réel en mètre à l'aide des intrinsèques et extrinsèques de la caméra pour ensuite publier le TF correspondant (x,y,z; z étant la distance calculée précédemment) :  
 ![Alt text](./images/image-1.png)
+
 <p align="center"><em>Visualisation des TFs</em></p>
+![Alt text](image-4.png)
+
+
+![Alt text](image.png)
+![Alt text](image-1.png)
+![Alt text](image-2.png)
+![Alt text](image-3.png)
 
 Pour voir les performances de l'algo :  
 ```bash
 nvidia-smi
 ```
-Environ 400MiB pour `pointcloud_proc` et 1700MiB pour `vision_obj_pers` :  
+Ressources utilisées :
+ - 170 MiB pour `pointcloud_proc` 
+ - 650 MiB pour `vision_obj_pers`
+ - 6260 MiB pour `face_reco_analysis`
+  
 ```bash
 +---------------------------------------------------------------------------------------+
-| NVIDIA-SMI 530.30.02              Driver Version: 530.30.02    CUDA Version: 12.1     |
+| NVIDIA-SMI 535.146.02             Driver Version: 535.146.02   CUDA Version: 12.2     |
 |-----------------------------------------+----------------------+----------------------+
-| GPU  Name                  Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
-| Fan  Temp  Perf            Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+| GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
 |                                         |                      |               MIG M. |
 |=========================================+======================+======================|
-|   0  NVIDIA GeForce RTX 2070 S...    On | 00000000:01:00.0 Off |                  N/A |
-| N/A   57C    P0               62W /  80W|   2120MiB /  8192MiB |     43%      Default |
+|   0  NVIDIA GeForce RTX 2070 ...    Off | 00000000:01:00.0 Off |                  N/A |
+| N/A   75C    P0              80W /  80W |   7094MiB /  8192MiB |     56%      Default |
 |                                         |                      |                  N/A |
 +-----------------------------------------+----------------------+----------------------+
                                                                                          
@@ -197,10 +225,12 @@ Environ 400MiB pour `pointcloud_proc` et 1700MiB pour `vision_obj_pers` :
 |  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
 |        ID   ID                                                             Usage      |
 |=======================================================================================|
-|    0   N/A  N/A      2598      G   /usr/lib/xorg/Xorg                            4MiB |
-|    0   N/A  N/A    134488      C   /usr/bin/python3                            388MiB |
-|    0   N/A  N/A    134490      C   /usr/bin/python3                           1724MiB |
+|    0   N/A  N/A      2146      G   /usr/lib/xorg/Xorg                            4MiB |
+|    0   N/A  N/A    314080      C   /usr/bin/python3                            172MiB |
+|    0   N/A  N/A    314082      C   /usr/bin/python3                            654MiB |
+|    0   N/A  N/A    314084      C   /usr/bin/python3                           6260MiB |
 +---------------------------------------------------------------------------------------+
+
 ```
 <p align="center"><em>Performances</em></p>
 
@@ -307,6 +337,10 @@ pip install cupy-rocm-4-3
 # Pour AMD ROCm 5.0
 pip install cupy-rocm-5-0
 ```
+
+
+deepface
+face_recognition
 
 4) Installer le SDK d'Intel® RealSense™
 ```bash

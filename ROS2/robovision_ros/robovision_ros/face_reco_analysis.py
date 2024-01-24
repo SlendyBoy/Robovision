@@ -20,6 +20,13 @@ class FaceRecognitionAnalysis(Node):
 
         self.last_time_obj = time.time()  # Initialiser last FPS
         self.bridge = CvBridge()
+        self.frames = []
+        self.frame_count = 0
+        # stocker les dernières informations d'attributs
+        self.last_age = None
+        self.last_genre = None
+        self.last_emotion = None
+        self.last_ethnie = None
         
 
         # Intrinsèques
@@ -83,45 +90,62 @@ class FaceRecognitionAnalysis(Node):
             # Appliquer la correction de distorsion sur l'image
             undistorted_frame = self.undistort_image(frame)
 
-            # BGR (format openCV) to RGB (format face reco)
             face_frame = undistorted_frame
 
             # face reco
-            face_locations = face_recognition.face_locations(face_frame)
+            
 
+            # Save each frame of the video to a list
+            self.frame_count += 1
+            self.frames.append(frame)
 
-            for face_location in face_locations:
+            # Every 5 frames (the default batch size), batch process the list of frames to find faces
+            if len(self.frames) == 1:
+                batch_of_face_locations = face_recognition.batch_face_locations(self.frames, number_of_times_to_upsample=0, batch_size=1)
 
-                top, right, bottom, left = face_location
-                print(" A face is located at pixel location Top: {}, Left: {}, Bottom: {}, Right: {}".format(top, left, bottom, right))
+                # Stocker les emplacements des visages pour la dernière frame
+                last_frame_face_locations = batch_of_face_locations[-1]
 
-                # Draw a box around the face
-                cv2.rectangle(face_frame, (left, top), (right, bottom), (0, 255, 0), 2)
+                # Analyser uniquement la dernière frame
+                last_frame = self.frames[-1]
 
-                # face analysis
-                face_image = face_frame[top:bottom, left:right]
+                for face_location in last_frame_face_locations:
+                    top, right, bottom, left = face_location
+                    face_image = last_frame[top:bottom, left:right]
 
-                try:
-                    analysis = DeepFace.analyze(face_image, actions=['age', 'gender', 'race', 'emotion'], enforce_detection=False)
-                    result = analysis[0]
-                    age = result['age']
-                    genre = result['dominant_gender']
-                    ethnie = result['dominant_race']
-                    emotion = result['dominant_emotion']
+                    # Draw a box around the face
+                    cv2.rectangle(face_frame, (left, top), (right, bottom), (0, 255, 0), 2)
 
-                    # Maintenant, vous pouvez utiliser ces valeurs pour l'affichage ou le traitement
-                    self.get_logger().info(f"Analyse - Âge : {age}, Genre : {genre}, Ethnie : {ethnie}, Émotion : {emotion}")
+                    if self.frame_count % 100 == 0:
 
-                    # Draw a label below the face
-                    cv2.putText(face_frame, f"Age : {age} ans", (left + 6, bottom + 20), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 1, cv2.LINE_AA)
-                    cv2.putText(face_frame, f"Genre : {genre}", (left + 6, bottom + 40), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 1, cv2.LINE_AA)
-                    cv2.putText(face_frame, f"Ethnie : {ethnie}", (left + 6, bottom + 60), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 1, cv2.LINE_AA)
-                    cv2.putText(face_frame, f"Emotion : {emotion}", (left + 6, bottom + 80), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 1, cv2.LINE_AA)
-                except Exception as e:
-                    self.get_logger().error('Erreur lors de l\'analyse des attributs du visage: {}'.format(e))
+                        # face analysis
+                        face_image = face_frame[top:bottom, left:right]
+
+                        try:
+                            analysis = DeepFace.analyze(face_image, actions=['age', 'gender', 'race', 'emotion'], detector_backend="opencv", enforce_detection=False, silent=True)
+                            result = analysis[0]
+                            self.last_age = result['age']
+                            self.last_genre = result['dominant_gender']
+                            self.last_ethnie = result['dominant_race']
+                            self.last_emotion = result['dominant_emotion']
+                            
+
+                            
+                        except Exception as e:
+                            self.get_logger().error('Erreur lors de l\'analyse des attributs du visage: {}'.format(e))
+
+                    if self.frame_count > 99:
+                        cv2.putText(face_frame, f"Age : {self.last_age} y.o", (left + 6, bottom + 20), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 1, cv2.LINE_AA)
+                        cv2.putText(face_frame, f"Genre : {self.last_genre}", (left + 6, bottom + 40), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 1, cv2.LINE_AA)
+                        cv2.putText(face_frame, f"Ethnie : {self.last_ethnie}", (left + 6, bottom + 60), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 1, cv2.LINE_AA)
+                        cv2.putText(face_frame, f"Emotion : {self.last_emotion}", (left + 6, bottom + 80), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 1, cv2.LINE_AA)
+
+                    # Clear the frames array to start the next batch
+                self.frames = []
 
             # Afficher les FPS
             self.cv2_txt(face_frame, f'FPS: {round(fps, 2)}', 10, 30, 1)
+            self.cv2_txt(face_frame, f'frame: {self.frame_count}', 10, 60, 1)
             # Afficher l'image finale
             cv2.imshow("Face analysis", face_frame)
             cv2.waitKey(1)
