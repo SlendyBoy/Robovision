@@ -93,13 +93,10 @@ class FaceRecognitionAnalysis(Node):
             face_frame = undistorted_frame
 
             # face reco
-            
-
-            # Save each frame of the video to a list
             self.frame_count += 1
             self.frames.append(frame)
 
-            # Every 5 frames (the default batch size), batch process the list of frames to find faces
+            # Toutes les frames, méthode batch (CNN sur GPU)
             if len(self.frames) == 1:
                 batch_of_face_locations = face_recognition.batch_face_locations(self.frames, number_of_times_to_upsample=0, batch_size=1)
 
@@ -113,12 +110,12 @@ class FaceRecognitionAnalysis(Node):
                     top, right, bottom, left = face_location
                     face_image = last_frame[top:bottom, left:right]
 
-                    # Draw a box around the face
+                    # bbox visage
                     cv2.rectangle(face_frame, (left, top), (right, bottom), (0, 255, 0), 2)
 
                     if self.frame_count % 100 == 0:
 
-                        # face analysis
+                        # analyse visage
                         face_image = face_frame[top:bottom, left:right]
 
                         try:
@@ -140,7 +137,7 @@ class FaceRecognitionAnalysis(Node):
                         cv2.putText(face_frame, f"Ethnie : {self.last_ethnie}", (left + 6, bottom + 60), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 1, cv2.LINE_AA)
                         cv2.putText(face_frame, f"Emotion : {self.last_emotion}", (left + 6, bottom + 80), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 1, cv2.LINE_AA)
 
-                    # Clear the frames array to start the next batch
+                    # Clear les frames pour le prochain batch
                 self.frames = []
 
             # Afficher les FPS

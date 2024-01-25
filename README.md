@@ -234,11 +234,14 @@ Ressources utilisées :
 ```
 <p align="center"><em>Performances</em></p>
 
-Transformation 2D en 3D
+## Les maths derrière
+
+### Transformation 2D en 3D
 
 Matrice intrinsèque caméra RGB :  
 
 $ 
+\text{CameraMatrix} =
 \begin{bmatrix} 
 fx & 0  & cx \\
 0  & fy & cy \\
@@ -248,46 +251,107 @@ $
 
 Dans cette matrice :
 
-- fx : longueur focale horizontale (px)
-- fy : longueur focale verticale (px)
-- cx : coordonnée horizontale du point principal (centre optique) (px)
-- cy : coordonnée verticale du point principal (centre optique) (px)
+- $fx$ : longueur focale horizontale (px)
+- $fy$ : longueur focale verticale (px)
+- $cx$ : coordonnée horizontale du point principal (centre optique) (px)
+- $cy$ : coordonnée verticale du point principal (centre optique) (px)
 
 Cette matrice est utilisée pour effectuer la transformation des coordonnées 3D du monde réel en coordonnées 2D sur le plan de l'image de la caméra.
 
 Point 2D $[x,y]$ en point 3D $[X, Y, Z]$ :  
-
-$X = (x - c_x) * d / fx$
-$Y = (y - c_y) * d / fy$
-$Z = d$
-
+  
+$X = (x - c_x) * d / fx$  
+$Y = (y - c_y) * d / fy$  
+$Z = d$  
+  
 Appliquer les transformations extrinsèques aux points 3D calculés :  
 
 Matrice de Rotation et Vecteur de Translation : représentent la transformation entre les systèmes de coordonnées de la caméra de profondeur et de la caméra RGB.  
 
-Transformation des Points 3D : Chaque point 3D calculé doit être transformé en utilisant R et T. Pour un point 3D $[X,Y,Z]$, la transformation se fait comme suit :  
-
-$ 
-\begin{bmatrix} 
+Transformation des Points 3D : Chaque point 3D calculé doit être transformé en utilisant $R$ et $T$. Pour un point 3D $[X,Y,Z]$, la transformation se fait comme suit :  
+  
+$  
+\begin{bmatrix}
 X' \\ Y' \\ Z'
 \end{bmatrix}
 = R \times
-\begin{bmatrix} 
+\begin{bmatrix}
 X \\ Y \\ Z
 \end{bmatrix}
 +
 T
-$
+$  
 
 Où X′, Y′, et Z′ sont les coordonnées transformées dans le système de coordonnées du monde réel.
 
+### Transformation 3D en 2D
+
+Pour chaque point 3D $[X, Y, Z]$ dans le nuage de points :
+
+Appliquer les extrinsèques (rotation et translation) :
+  
+$   
+\begin{bmatrix}
+X' \\ Y' \\ Z'
+\end{bmatrix}
+= R \times
+\begin{bmatrix}
+X \\ Y \\ Z
+\end{bmatrix}
++
+T
+$  
+  
+Ajouter une colonne de 1 pour obtenir les [coordonnées homogènes](https://fr.wikipedia.org/wiki/Coordonn%C3%A9es_homog%C3%A8nes) :
+  
+$  
+\begin{bmatrix}
+X' \\ Y' \\ Z' \\ 1
+\end{bmatrix}
+$  
+
+Effectuer la multiplication matricielle avec la matrice intrinsèque de la caméra :
+  
+$  
+\begin{bmatrix}
+u \\ v
+\end{bmatrix}
+= \text{CameraMatrix} \times
+\begin{bmatrix}
+X' \\
+Y' \\
+Z' \\
+1
+\end{bmatrix}
+$  
+
+Normaliser pour obtenir les coordonnées en pixels u et v en divisant par la composante $Z'$ :
+   
+$
+\begin{bmatrix}
+u' \\
+v'
+\end{bmatrix}
+= \begin{bmatrix}
+u \\
+v
+\end{bmatrix}
+/
+Z'
+$
+
+
+
+
+
+
 # Technologies et outils
 
-    - ROS2 : Intégration et communication
-    - Python : API et algorithmes
-    - OpenCV : Traitement d'image et visualisation côté utilisateur
-    - YOLOv8 : Reconnaissance et segmentation d'objets, personnes
-    - Rviz : visualisation des topics côté ROS2  
+  - ROS2 : Intégration et communication
+  - Python : API et algorithmes
+  - OpenCV : Traitement d'image et visualisation côté utilisateur
+  - YOLOv8 : Reconnaissance et segmentation d'objets, personnes
+  - Rviz : visualisation des topics côté ROS2  
   
 # Pré-requis  
 Environnement de dev :  
@@ -301,6 +365,8 @@ Environnement de dev :
   - CUDA 12.1  
 
 # Installation
+
+1) Installer ROS2 Humble
 
 1) Installer les librairies
 ```bash
@@ -338,29 +404,73 @@ pip install cupy-rocm-4-3
 pip install cupy-rocm-5-0
 ```
 
+1) Installer dlib compilé avec CUDA
+- Vérifier la version de nvcc
+```bash
+nvcc --version
+```
 
-deepface
-face_recognition
+- Installer dlib
 
-4) Installer le SDK d'Intel® RealSense™
+```bash
+pip uninstall dlib
+# cloner le repo (dans /home par exemple)
+git clone https://github.com/davisking/dlib.git
+cd dlib
+mkdir build
+cd build
+
+
+cmake .. -DDLIB_USE_CUDA=1 -DUSE_AVX_INSTRUCTIONS=1
+cmake --build .
+
+cd ..
+python3 setup.py install
+
+
+```
+Si problème de compatibilité entre le compilateur (gcc/g++) et nvcc (le compilateur CUDA), chercher le compilateur compatible:  
+[Tableau compatibilité nvcc et gcc](https://gist.github.com/ax3l/9489132)  
+  
+Installer la version spécifique de gcc et g++ (ex pour ver 9):
+```bash
+sudo apt update
+sudo apt install gcc-9 g++-9
+```
+Préciser la version lors du build
+```bash
+pip uninstall dlib
+cd dlib
+mkdir build
+cd build
+
+CC=gcc-9 CXX=g++-9 cmake .. -DDLIB_USE_CUDA=1 -DUSE_AVX_INSTRUCTIONS=1
+cmake --build .
+
+cd ..
+CC=gcc-9 CXX=g++-9 python3 setup.py install
+```
+
+
+1) Installer le SDK d'Intel® RealSense™
 ```bash
 sudo apt install ros-humble-librealsense2*
 ```
 
-5) Création du workspace ROS2 Humble
+1) Création du workspace ROS2 Humble
 ```bash
 mkdir -p ~/ros2_humble_ws/src
 cd ~/ros2_humble_ws/src/
 ```
 
-6) Installer le wrapper Intel® RealSense™ ROS2
+1) Installer le wrapper Intel® RealSense™ ROS2
 Clone dans `src`:
 ```bash
 git clone https://github.com/IntelRealSense/realsense-ros.git -b ros2-development
 cd ~/ros2_humble_ws
 ```
 
-7) Installer les dépendences
+1) Installer les dépendences
 ```bash
 sudo apt-get install python3-rosdep -y
 sudo rosdep init
