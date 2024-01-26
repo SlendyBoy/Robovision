@@ -6,7 +6,7 @@ Auteur : Tanguy FROUIN 5IRC
 
 # État de l'Art
 
-## "Awesome lists"
+## "Awesome lists" - listes d'articles de recherche
 - [Une liste d'articles et d'ensembles de données sur l'analyse des nuages de points (traitement)](https://github.com/Yochengliu/awesome-point-cloud-analysis)
 - [Une collection de projets publics impressionnants de détection d'objets YOLO](https://github.com/codingonion/awesome-yolo-object-detection)
 - [Articles, codes et ensembles de données sur l'apprentissage profond pour la détection d'objets en 3D](https://github.com/TianhaoFu/Awesome-3D-Object-Detection)
@@ -37,6 +37,12 @@ Auteur : Tanguy FROUIN 5IRC
 - [Introduction à la segmentation d'images avec K-Means](https://www.kdnuggets.com/2019/08/introduction-image-segmentation-k-means-clustering.html)
 - [Implémentation de la segmentation d'instance avec YOLOv8](https://dev.to/andreygermanov/how-to-implement-instance-segmentation-using-yolov8-neural-network-3if9)
 
+## Détection visages et attributs
+- [Face recognition : détection de visages](https://github.com/ageitgey/face_recognition)
+- [DeepFace : détection d'attributs](https://github.com/serengil/deepface)
+- [Modèle dlib](https://github.com/davisking/dlib)
+- [Insightface analyse 2D et 3D de visages](https://github.com/deepinsight/insightface)
+
 ## Mediapipe
 - [Solutions Mediapipe de Google](https://github.com/google/mediapipe/blob/master/docs/solutions/)
 - [Exemples Mediapipe de Google](https://github.com/googlesamples/mediapipe/tree/main/examples)
@@ -61,11 +67,13 @@ Auteur : Tanguy FROUIN 5IRC
 - [Ressources pour développeurs Intel RealSense](https://www.intelrealsense.com/developers/)
 
 ## Optimisation
+- [CUDA](https://developer.nvidia.com/cuda-toolkit)
 - [CuPy - NumPy-like API pour GPU](https://cupy.dev/)
 
 
-
 # Liste des fonctionnalités  
+
+- [ ] Fonctionnement sur plusieurs caméras 3D
 
 - Noeud `pointcloud_proc` :  
     - [x] Récupération du nuage de points 3D depuis la caméra
@@ -74,21 +82,19 @@ Auteur : Tanguy FROUIN 5IRC
         - [x] Publication données brutes sur le topic `/robovision/depth/raw`
         - [x] Publication visualisation sur le topic `/robovision/depth/color`
 - Noeud `vision_obj_pers` :  
-    - [x] Récupération de l'image RGB et de l'image de profondeur
-    - [x] Correction de la distortion de l'image RGB
     - [x] Inférence du modèle de segmentation YOLOv8 :
         - [x] Traitement pour chaque objet détecté
             - [x] Affichage des bounding boxes et informations de l'objet
             - [x] Calcul et affichage de la distance objet-caméra
             - [x] Projection des pixels (centre bbox) dans le monde réel en mètres
             - [x] Publication des TFs (x,y,z)
+            - [ ] Taxonomie
     - [x] Inférence du modèle de pose de YOLOv8 :
         - [x] Analyse des positions des personnes (assis, debout, couché)
         - [x] Affichage du squelette et de la position dans la bounding box
-    - [x] Superposition des images "seg_frame" et "pose_frame"
 - Noeud `face_reco_analysis` : 
     - [x] Détection des visages
-    - [x] Détection des attributs (age, genre, émotion, ethnie)
+    - [x] Détection des attributs (âge, genre, émotion, ethnie)
 
 
 # Représentation des noeuds ROS2
@@ -127,16 +133,18 @@ Camera3D-->>face_reco_analysis: /camera/camera/color/image_raw
 loop Pour chaque frame RGB
 
 vision_obj_pers->>vision_obj_pers: Correction distortion image RGB
+vision_obj_pers->>vision_obj_pers: Création seg_frame
 vision_obj_pers->>YOLOv8: Inférence segmentation
 YOLOv8->>vision_obj_pers: Objets détectés
 vision_obj_pers->>vision_obj_pers: Calcul profondeur obj
 vision_obj_pers->>vision_obj_pers: Projection pixels RGB à points 3D en mètres
 vision_obj_pers-->>rviz: Publication TF
-vision_obj_pers->>vision_obj_pers: Création seg_frame
+
+vision_obj_pers->>vision_obj_pers: Création pose_frame
 vision_obj_pers->>YOLOv8: Inférence Pose
 YOLOv8->>vision_obj_pers: Keypoints et membres
 vision_obj_pers->>vision_obj_pers: Calcul position
-vision_obj_pers->>vision_obj_pers: Création pose_frame
+
 vision_obj_pers->>vision_obj_pers: Superposition seg_frame et pose_frame
 
 face_reco_analysis->>dlib: Inférence détection visages
@@ -146,57 +154,54 @@ end
 loop Toutes les 100 frames RGB
 face_reco_analysis->>deepface: Emplacements visages
 deepface->>face_reco_analysis: attributs
+face_reco_analysis->>face_reco_analysis: MAJ attributs
 end
 ```
 
 
 La caméra envoie le nuage de points 3D :  
-![Alt text](./images/image.png)
+![Alt text](./images/pointcloud.png)
 <p align="center"><em>Visualisation du pointcloud envoyé par la caméra</em></p>
 
 
 Projection des points 3D du nuage en 2D à l'aides des intrinsèques et extrinsèques de la caméra :  
-![Alt text](./images/image-4.png)
+![Alt text](./images/proj-2D.png)
 <p align="center"><em>Visualisation des points 3D projetés en 2D sur l'image RGB</em></p>
 
 
 Après le calcul de projection, on crée l'image de profondeur qui sera publiée et utilisée pour les calculs de distance :  
-![Alt text](./images/image-2.png)
+![Alt text](./images/depth-raw.png)
 <p align="center"><em>Visualisation de l'image de profondeur brut</em></p>
 
 
 Création de la même image mais en RGB, qui sera elle aussi publiée :  
-![Alt text](./images/image-3.png)
+![Alt text](./images/depth-color.png)
 <p align="center"><em>Visualisation de l'image de profondeur RGB</em></p>
 
 
 Le calcul de la profondeur est basé sur les pixels des masques de segmentation des objets. On fait ensuite la médiane de la profondeur des points 3D correspondant à ces pixels. Voici par exemple les masques affichés :  
-![Alt text](./images/image-6.png)
+![Alt text](./images/segment.png)
 <p align="center"><em>Visualisation détection et segmentation objets, distance, pose et position personne</em></p>
 
 
 Par soucis de performance, on n'affiche pas les masques de segmentation.  
 Voici l'image finale :  
-![Alt text](./images/image-5.png)
+![Alt text](./images/detect1.png)
+![Alt text](./images/detect2.png)
+![Alt text](./images/detect3.png)
 <p align="center"><em>Visualisation détection objets, distance, pose et position personne</em></p>
 
-
-![Alt text](./images/image-8.png)
-
-
-![Alt text](./images/image-9.png)
-
 On récupère le centre des bounding boxes des objets/personnes (x,y en pixels) puis le pixel est projeté dans le référentiel du monde réel en mètre à l'aide des intrinsèques et extrinsèques de la caméra pour ensuite publier le TF correspondant (x,y,z; z étant la distance calculée précédemment) :  
-![Alt text](./images/image-1.png)
-
+![Alt text](./images/tf.png)
+![Alt text](./tf-aligned.png)
 <p align="center"><em>Visualisation des TFs</em></p>
-![Alt text](image-4.png)
 
-
-![Alt text](image.png)
-![Alt text](image-1.png)
-![Alt text](image-2.png)
-![Alt text](image-3.png)
+Concernant la reconnaissance de visage, la détection se fait toutes les frames alors que la détection d'attributs se fait toutes les 100 frames
+![Alt text](./face-happy.png)
+![Alt text](./face-sad.png)
+![Alt text](./face-fear.png)
+![Alt text](./faces.png)
+<p align="center"><em>Détection visage et attributs</em></p>
 
 Pour voir les performances de l'algo :  
 ```bash
@@ -240,14 +245,7 @@ Ressources utilisées :
 
 Matrice intrinsèque caméra RGB :  
 
-$ 
-\text{CameraMatrix} =
-\begin{bmatrix} 
-fx & 0  & cx \\
-0  & fy & cy \\
-0  & 0  & 1
-\end{bmatrix}
-$
+$\text{CameraMatrix} = \begin{bmatrix} fx & 0  & cx \\ 0  & fy & cy \\ 0  & 0  & 1 \end{bmatrix}$
 
 Dans cette matrice :
 
@@ -270,17 +268,7 @@ Matrice de Rotation et Vecteur de Translation : représentent la transformation 
 
 Transformation des Points 3D : Chaque point 3D calculé doit être transformé en utilisant $R$ et $T$. Pour un point 3D $[X,Y,Z]$, la transformation se fait comme suit :  
   
-$  
-\begin{bmatrix}
-X' \\ Y' \\ Z'
-\end{bmatrix}
-= R \times
-\begin{bmatrix}
-X \\ Y \\ Z
-\end{bmatrix}
-+
-T
-$  
+$\begin{bmatrix} X' \\ Y' \\ Z' \end{bmatrix} = R \times \begin{bmatrix} X \\ Y \\ Z \end{bmatrix} + T$  
 
 Où X′, Y′, et Z′ sont les coordonnées transformées dans le système de coordonnées du monde réel.
 
@@ -290,67 +278,35 @@ Pour chaque point 3D $[X, Y, Z]$ dans le nuage de points :
 
 Appliquer les extrinsèques (rotation et translation) :
   
-$   
-\begin{bmatrix}
-X' \\ Y' \\ Z'
-\end{bmatrix}
-= R \times
-\begin{bmatrix}
-X \\ Y \\ Z
-\end{bmatrix}
-+
-T
-$  
+$\begin{bmatrix} X' \\ Y' \\ Z' \end{bmatrix} = R \times \begin{bmatrix} X \\ Y \\ Z \end{bmatrix} + T$  
   
 Ajouter une colonne de 1 pour obtenir les [coordonnées homogènes](https://fr.wikipedia.org/wiki/Coordonn%C3%A9es_homog%C3%A8nes) :
   
-$  
-\begin{bmatrix}
-X' \\ Y' \\ Z' \\ 1
-\end{bmatrix}
-$  
+$\begin{bmatrix} X' \\ Y' \\ Z' \\ 1 \end{bmatrix}$  
 
 Effectuer la multiplication matricielle avec la matrice intrinsèque de la caméra :
   
-$  
-\begin{bmatrix}
-u \\ v
-\end{bmatrix}
-= \text{CameraMatrix} \times
-\begin{bmatrix}
-X' \\
-Y' \\
-Z' \\
-1
-\end{bmatrix}
-$  
+$\begin{bmatrix} u \\ v \end{bmatrix} = \text{CameraMatrix} \times \begin{bmatrix} X' \\ Y' \\ Z' \\ 1 \end{bmatrix}$  
 
 Normaliser pour obtenir les coordonnées en pixels u et v en divisant par la composante $Z'$ :
    
-$
-\begin{bmatrix}
-u' \\
-v'
-\end{bmatrix}
-= \begin{bmatrix}
-u \\
-v
-\end{bmatrix}
-/
-Z'
-$
+$\begin{bmatrix} u' \\ v' \end{bmatrix} = \begin{bmatrix} u \\ v \end{bmatrix} / Z'$
 
 
-
-
+# Vidéos de présentation
+- [Lien playlist Youtube](https://www.youtube.com/playlist?list=PLSOrx0Gj8BqAYgfeohUcZZBZAOZhA5qqw)  
+- [Lien pitch Youtube](https://youtu.be/oKvxMnfuEwY)  
+- [Lien tuto Youtube](https://youtu.be/gTv261ROc8w)  
 
 
 # Technologies et outils
 
   - ROS2 : Intégration et communication
   - Python : API et algorithmes
+  - CUDA : Opérations sur GPU
   - OpenCV : Traitement d'image et visualisation côté utilisateur
   - YOLOv8 : Reconnaissance et segmentation d'objets, personnes
+  - Deepface : Reconnaissance visages et attributs
   - Rviz : visualisation des topics côté ROS2  
   
 # Pré-requis  
@@ -366,21 +322,21 @@ Environnement de dev :
 
 # Installation
 
-1) Installer ROS2 Humble
+1) [Installer ROS2 Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html)
 
-1) Installer les librairies
+2) Installer les librairies  
 ```bash
 pip install -r requirements.txt
 ```
 
-2) Connaitre la version de CUDA  (plusieurs façons)
+3) [Installer CUDA](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html) et connaitre la version de CUDA (plusieurs façons)  
 ```bash
 nvcc --version
 cat /usr/local/cuda/version.json
 ls -l /usr/local | grep cuda # cuda supposément installé dans /usr/local/cuda
 ```
 
-3) Installer la version de CuPy (NumPy sur GPU) selon la version de CUDA (ne pas remplacer x dans la version de CuPy)
+4) Installer la version de CuPy (NumPy sur GPU) selon la version de CUDA (ne pas remplacer x dans la version de CuPy)  
 ```bash
 # Pour CUDA 10.2
 pip install cupy-cuda102
@@ -396,19 +352,15 @@ pip install cupy-cuda11x
 
 # Pour CUDA 12.x
 pip install cupy-cuda12x
-
-# Pour AMD ROCm 4.3
-pip install cupy-rocm-4-3
-
-# Pour AMD ROCm 5.0
-pip install cupy-rocm-5-0
 ```
 
-1) Installer dlib compilé avec CUDA
+5) Installer dlib compilé avec CUDA  
 - Vérifier la version de nvcc
 ```bash
 nvcc --version
 ```
+
+- [Installer cuDNN](https://developer.nvidia.com/rdp/cudnn-archive)  
 
 - Installer dlib
 
@@ -452,25 +404,25 @@ CC=gcc-9 CXX=g++-9 python3 setup.py install
 ```
 
 
-1) Installer le SDK d'Intel® RealSense™
+6) Installer le SDK d'Intel® RealSense™
 ```bash
 sudo apt install ros-humble-librealsense2*
 ```
 
-1) Création du workspace ROS2 Humble
+7) Création du workspace ROS2 Humble
 ```bash
 mkdir -p ~/ros2_humble_ws/src
 cd ~/ros2_humble_ws/src/
 ```
 
-1) Installer le wrapper Intel® RealSense™ ROS2
+8) Installer le wrapper Intel® RealSense™ ROS2
 Clone dans `src`:
 ```bash
 git clone https://github.com/IntelRealSense/realsense-ros.git -b ros2-development
 cd ~/ros2_humble_ws
 ```
 
-1) Installer les dépendences
+9) Installer les dépendences
 ```bash
 sudo apt-get install python3-rosdep -y
 sudo rosdep init
@@ -488,7 +440,7 @@ colcon build
 source install/setup.bash
 ```
 
-7) (bis) Si le build ne passe pas (selon mon historique de commandes):
+9) (bis) Si le build ne passe pas (selon mon historique de commandes):
 
 ```bash
 source install/setup.bash
@@ -506,24 +458,24 @@ source /opt/ros/humble/setup.bash
 source install/setup.bash
 ```
 
-8) Placer le package `ROS2/robovision_ros` dans `ros2_humble_ws/src/`
+10) Placer le package `ROS2/robovision_ros` dans `ros2_humble_ws/src/`
 Build et source
 ```bash
 colcon build
 source install/setup.bash
 ```
 
-9) Lancer le noeud de la camera dans un terminal
+11) Lancer le noeud de la camera dans un terminal
 ```bash
 ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=true align_depth.enable:=true pointcloud.ordered_pc:=true
 ```
 
-10) Lancer les noeuds du package dans un autre terminal
+12) Lancer les noeuds du package dans un autre terminal
 ```bash
 ros2 launch robovision_ros launch.py
 ```
 
-11) Lancer Rviz dans un autre terminal
+13) Lancer Rviz dans un autre terminal
 ```bash
 rviz2
 ```
