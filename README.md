@@ -193,14 +193,14 @@ Voici l'image finale :
 
 On récupère le centre des bounding boxes des objets/personnes (x,y en pixels) puis le pixel est projeté dans le référentiel du monde réel en mètre à l'aide des intrinsèques et extrinsèques de la caméra pour ensuite publier le TF correspondant (x,y,z; z étant la distance calculée précédemment) :  
 ![Alt text](./images/tf.png)
-![Alt text](./tf-aligned.png)
+![Alt text](./images/tf-aligned.png)
 <p align="center"><em>Visualisation des TFs</em></p>
 
 Concernant la reconnaissance de visage, la détection se fait toutes les frames alors que la détection d'attributs se fait toutes les 100 frames
-![Alt text](./face-happy.png)
-![Alt text](./face-sad.png)
-![Alt text](./face-fear.png)
-![Alt text](./faces.png)
+![Alt text](./images/face-happy.png)
+![Alt text](./images/face-sad.png)
+![Alt text](./images/face-fear.png)
+![Alt text](./images/faces.png)
 <p align="center"><em>Détection visage et attributs</em></p>
 
 Pour voir les performances de l'algo :  
@@ -245,7 +245,14 @@ Ressources utilisées :
 
 Matrice intrinsèque caméra RGB :  
 
-$\text{CameraMatrix} = \begin{bmatrix} fx & 0  & cx \\ 0  & fy & cy \\ 0  & 0  & 1 \end{bmatrix}$
+$$
+\text{CameraMatrix} =
+\begin{bmatrix}
+fx & 0  & cx \\
+0  & fy & cy \\
+0  & 0  & 1
+\end{bmatrix}
+$$
 
 Dans cette matrice :
 
@@ -268,7 +275,17 @@ Matrice de Rotation et Vecteur de Translation : représentent la transformation 
 
 Transformation des Points 3D : Chaque point 3D calculé doit être transformé en utilisant $R$ et $T$. Pour un point 3D $[X,Y,Z]$, la transformation se fait comme suit :  
   
-$\begin{bmatrix} X' \\ Y' \\ Z' \end{bmatrix} = R \times \begin{bmatrix} X \\ Y \\ Z \end{bmatrix} + T$  
+$$
+\begin{bmatrix}
+X' \\ Y' \\ Z'
+\end{bmatrix}
+= R \times
+\begin{bmatrix}
+X \\ Y \\ Z
+\end{bmatrix}
++
+T
+$$
 
 Où X′, Y′, et Z′ sont les coordonnées transformées dans le système de coordonnées du monde réel.
 
@@ -278,25 +295,61 @@ Pour chaque point 3D $[X, Y, Z]$ dans le nuage de points :
 
 Appliquer les extrinsèques (rotation et translation) :
   
-$\begin{bmatrix} X' \\ Y' \\ Z' \end{bmatrix} = R \times \begin{bmatrix} X \\ Y \\ Z \end{bmatrix} + T$  
+$$
+\begin{bmatrix}
+X' \\ Y' \\ Z'
+\end{bmatrix}
+= R \times
+\begin{bmatrix}
+X \\ Y \\ Z
+\end{bmatrix}
++
+T
+$$
   
 Ajouter une colonne de 1 pour obtenir les [coordonnées homogènes](https://fr.wikipedia.org/wiki/Coordonn%C3%A9es_homog%C3%A8nes) :
   
-$\begin{bmatrix} X' \\ Y' \\ Z' \\ 1 \end{bmatrix}$  
+$$
+\begin{bmatrix}
+X' \\ Y' \\ Z' \\ 1
+\end{bmatrix}
+$$
 
 Effectuer la multiplication matricielle avec la matrice intrinsèque de la caméra :
   
-$\begin{bmatrix} u \\ v \end{bmatrix} = \text{CameraMatrix} \times \begin{bmatrix} X' \\ Y' \\ Z' \\ 1 \end{bmatrix}$  
+$$
+\begin{bmatrix}
+u \\ v
+\end{bmatrix}
+= \text{CameraMatrix} \times
+\begin{bmatrix}
+X' \\
+Y' \\
+Z' \\
+1
+\end{bmatrix}
+$$
 
 Normaliser pour obtenir les coordonnées en pixels u et v en divisant par la composante $Z'$ :
    
-$\begin{bmatrix} u' \\ v' \end{bmatrix} = \begin{bmatrix} u \\ v \end{bmatrix} / Z'$
+$$
+\begin{bmatrix}
+u' \\
+v'
+\end{bmatrix}
+= \begin{bmatrix}
+u \\
+v
+\end{bmatrix}
+/
+Z'
+$$
 
 
 # Vidéos de présentation
-- [Lien playlist Youtube](https://www.youtube.com/playlist?list=PLSOrx0Gj8BqAYgfeohUcZZBZAOZhA5qqw)  
-- [Lien pitch Youtube](https://youtu.be/oKvxMnfuEwY)  
-- [Lien tuto Youtube](https://youtu.be/gTv261ROc8w)  
+- [Lien playlist Youtube](https://www.youtube.com/playlist?list=PLSOrx0Gj8BqAYgfeohUcZZBZAOZhA5qqw)
+- [Lien pitch Youtube](https://youtu.be/oKvxMnfuEwY)
+- [Lien tuto Youtube](https://youtu.be/gTv261ROc8w)
 
 
 # Technologies et outils
